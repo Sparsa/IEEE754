@@ -798,7 +798,7 @@ def classify (f : F32) : F32Class :=
   else if f.isInf       then .inf
   else .nan
 
-theorem finite_classify (f : F32)  (hNaN: f.isNaN = false) (hInf: f.isInf = false):
+theorem finite_classify (f : F32)   (hNaN : f.isNaN = false) (hInf: f.isInf = false) :
     f.isZero ∨ f.isSubnormal ∨ f.isNormal := by
   simp only [isNaN, isInf] at hNaN hInf
   simp only [isZero, isSubnormal, isNormal]
@@ -888,8 +888,8 @@ private theorem isInf_false_of_isNaN (f : F32) (h : f.isNaN = true) :
   intros
   exact h.2
 
-private theorem isNaN_false_of_isInf (f:F32) (h:f.isInf = true) : 
-  f.isNaN = false := by 
+private theorem isNaN_false_of_isInf (f:F32) (h:f.isInf = true) :
+  f.isNaN = false := by
   simp [isNaN,isInf] at *
   obtain ⟨expMax,mantZ⟩ := h
   intros h1
@@ -956,16 +956,16 @@ constructor
                    simp at h
                    cases hN : f.isNormal with
                    | true => simp_all
-                   | false => 
+                   | false =>
                      rw [hN] at h
                      simp at h
                      simp_all
                      have ce_f := classify_exclusive f
-                     rw [hNan,hZ,hsN,hN] at ce_f 
-                     simp at ce_f 
+                     rw [hNan,hZ,hsN,hN] at ce_f
+                     simp at ce_f
                      rw [h] at ce_f
                      contradiction
-                     
+
 
 theorem biject_class_inf (f:F32) :
   f.isInf ↔ (classify f) = .inf :=
@@ -994,13 +994,13 @@ constructor
                    simp at h
                    cases hN : f.isNormal with
                    | true => simp_all
-                   | false => 
+                   | false =>
                      rw [hN] at h
                      simp at h
                      simp_all
                      have ce_f := classify_exclusive f
-                     rw [hNan,hZ,hsN,hN] at ce_f 
-                     simp at ce_f 
+                     rw [hNan,hZ,hsN,hN] at ce_f
+                     simp at ce_f
                      rw [h] at ce_f
                      contradiction
 

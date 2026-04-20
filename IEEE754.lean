@@ -798,29 +798,228 @@ def classify (f : F32) : F32Class :=
   else if f.isInf       then .inf
   else .nan
 
-theorem finite_classify (f : F32)  :
+theorem finite_classify (f : F32)  (hNaN: f.isNaN = false) (hInf: f.isInf = false):
     f.isZero ∨ f.isSubnormal ∨ f.isNormal := by
   simp only [isNaN, isInf] at hNaN hInf
   simp only [isZero, isSubnormal, isNormal]
   cases h1 : f.expIsZero <;> cases h2 : f.mantIsZero <;> cases h3 : f.expIsMax <;>
   simp_all
 
-theorem finite_classify_new (f: F32) :
-(map ((λ x fu  =>  if (fu x) then 1 else 0) f) [isNan, isInf, isZero, isSubnormal, isNormal]).sum = 1 := by
+theorem contrapositive_example (h : p → q) : ¬q → ¬p := by
+  intro hnq hp
+  apply hnq
+  apply h
+  exact hp
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Auxiliary lemmas used across all five proofs
+-- ─────────────────────────────────────────────────────────────────────────────
 
-theorem class_zero:
-classify a = zero → a.isZero = true := by
-intros h
-simp [classify] at h
-split at h
-·
-  rename_i a_is_z
-  exact a_is_z
-·
-  rename_i a_is_not_z
-  simp at a_is_not_z
-  simp [a_is_not_z]
-  decide
+private theorem expZero_ne_expMax (f : F32) :
+    ¬(f.expIsZero = true ∧ f.expIsMax = true) := by
+  simp [expIsZero, expIsMax]
+  intro h; simp [h]
+
+private theorem isZero_false_of_isSubnormal (f : F32) (h : f.isSubnormal = true) :
+    f.isZero = false := by
+  simp [isZero, isSubnormal] at *
+  obtain ⟨hexp, hmant⟩ := h
+  simp [hexp, hmant]
+
+private theorem isZero_false_of_isNormal (f : F32) (h : f.isNormal = true) :
+    f.isZero = false := by
+  simp [isZero, isNormal, expIsZero, expIsMax] at *
+  obtain ⟨hne0, _⟩ := h
+  cases hm : f.mantIsZero <;> simp [hne0]
+
+private theorem isZero_false_of_isInf (f : F32) (h : f.isInf = true) :
+    f.isZero = false := by
+  simp [isZero, isInf, expIsZero, expIsMax] at *
+  obtain ⟨left, right⟩ := h
+  intro hzero
+  rw [left] at hzero
+  contradiction
+
+private theorem isZero_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+    f.isZero = false := by
+  simp [isZero, isNaN, expIsZero, expIsMax] at *
+  obtain ⟨hmax, _⟩ := h
+  intro hzero
+  rw [hmax] at hzero
+  contradiction
+
+private theorem isSubnormal_false_of_isNormal (f : F32) (h : f.isNormal = true) :
+    f.isSubnormal = false := by
+  simp [isSubnormal, isNormal, expIsZero] at *
+  intros h2
+  obtain ⟨expraw_nz, exp_nomax⟩ := h
+  contradiction
+
+private theorem isSubnormal_false_of_isInf (f : F32) (h : f.isInf = true) :
+    f.isSubnormal = false := by
+  simp [isSubnormal, isInf, expIsZero, expIsMax] at *
+  obtain ⟨hmax, mantissa_max⟩ := h
+  intro hzero
+  rw [hmax] at hzero
+  contradiction
+
+private theorem isSubnormal_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+    f.isSubnormal = false := by
+  simp [isSubnormal, isNaN, expIsZero, expIsMax] at *
+  obtain ⟨hmax, _⟩ := h
+  intro hzero
+  rw [hmax] at hzero
+  contradiction
+
+private theorem isNormal_false_of_isInf (f : F32) (h : f.isInf = true) :
+    f.isNormal = false := by
+  simp [isNormal, isInf, expIsMax] at *
+  intros exp_zero
+  exact h.1
+
+private theorem isNormal_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+    f.isNormal = false := by
+  simp [isNormal, isNaN, expIsMax] at *
+  intros
+  exact h.1
+
+private theorem isInf_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+    f.isInf = false := by
+  simp [isInf, isNaN, mantIsZero] at *
+  intros
+  exact h.2
+
+private theorem isNaN_false_of_isInf (f:F32) (h:f.isInf = true) : 
+  f.isNaN = false := by 
+  simp [isNaN,isInf] at *
+  obtain ⟨expMax,mantZ⟩ := h
+  intros h1
+  exact mantZ
+
+
+theorem biject_class_zero (f : F32) :
+    f.isZero = true ↔ classify f = .zero := by
+  constructor
+  · intro h
+    unfold classify
+    rw [h]
+    simp
+  · intro h
+    unfold classify at h
+    cases hZ : f.isZero with
+    | true  =>
+      -- isZero = true, done
+       rfl
+    | false =>
+      -- isZero = false: h simplifies to nested ifs
+      rw [hZ] at h
+      simp at h
+      -- h is now about inner ifs, all give ≠ .zero
+      cases hSubN : f.isSubnormal with
+      | true =>
+             simp_all
+      | false =>
+             cases hN : f.isNormal with
+             | true => simp_all
+             | false =>
+                     rw [hSubN, hN] at h
+                     simp at h
+                     cases hInf : f.isInf with
+                     | true => simp_all
+                     | false => simp_all
+
+
+
+theorem biject_class_nan (f:F32) :
+  f.isNaN ↔ (classify f) = .nan :=
+by
+constructor
+· intro h
+  unfold classify
+  rw [isZero_false_of_isNaN, isSubnormal_false_of_isNaN, isNormal_false_of_isNaN, isInf_false_of_isNaN]
+  simp
+  repeat exact h
+· intro h
+  unfold classify at h
+  cases hNan : f.isNaN with
+  | true  =>
+    -- isZero = true, done
+     rfl
+  | false =>
+    cases hZ : f.isZero with
+    | true =>
+           simp_all
+    | false =>
+           cases hsN : f.isSubnormal with
+           | true => simp_all
+           | false =>
+                   rw [hsN, hZ] at h
+                   simp at h
+                   cases hN : f.isNormal with
+                   | true => simp_all
+                   | false => 
+                     rw [hN] at h
+                     simp at h
+                     simp_all
+                     have ce_f := classify_exclusive f
+                     rw [hNan,hZ,hsN,hN] at ce_f 
+                     simp at ce_f 
+                     rw [h] at ce_f
+                     contradiction
+                     
+
+theorem biject_class_inf (f:F32) :
+  f.isInf ↔ (classify f) = .inf :=
+by
+constructor
+· intro h
+  unfold classify
+  rw [isZero_false_of_isInf, isSubnormal_false_of_isInf, isNormal_false_of_isInf, isNaN_false_of_isInf]
+  simp
+  repeat exact h
+· intro h
+  unfold classify at h
+  cases hinf : f.isinf with
+  | true  =>
+    -- isZero = true, done
+     rfl
+  | false =>
+    cases hZ : f.isZero with
+    | true =>
+           simp_all
+    | false =>
+           cases hsN : f.isSubnormal with
+           | true => simp_all
+           | false =>
+                   rw [hsN, hZ] at h
+                   simp at h
+                   cases hN : f.isNormal with
+                   | true => simp_all
+                   | false => 
+                     rw [hN] at h
+                     simp at h
+                     simp_all
+                     have ce_f := classify_exclusive f
+                     rw [hNan,hZ,hsN,hN] at ce_f 
+                     simp at ce_f 
+                     rw [h] at ce_f
+                     contradiction
+
+theorem biject_class_zero (f:f32) :
+  f.isInf ↔ (classify f) = .nan :=
+by
+:=
+sorry
+theorem biject_class_zero (f:f32) :
+  f.isNormal ↔ (classify f) = .nan :=
+by
+:=
+sorry
+theorem biject_class_zero (f:f32) :
+  f.isSubnormal ↔ (classify f) = .nan :=
+by
+:=
+sorry
+
 
 
 

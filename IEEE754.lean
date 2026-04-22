@@ -810,6 +810,7 @@ theorem contrapositive_example (h : p → q) : ¬q → ¬p := by
   apply hnq
   apply h
   exact hp
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Auxiliary lemmas used across all five proofs
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -886,11 +887,26 @@ private theorem isInf_false_of_isNaN (f : F32) (h : f.isNaN = true) :
     f.isInf = false := by
   simp [isInf, isNaN, mantIsZero] at *
   intros
-  exact h.2
+  obtain ⟨ _, mant_nonzero⟩ := h
+  exact mant_nonzero
+
+
+private theorem isInf_false_of_isZero (f : F32) (h : f.isZero = true) :
+  f.isInf = false := by
+  simp [isInf, isZero ] at *
+  intros h
+  rename_i h2
+  simp [expIsZero,expIsMax] at *
+  cases h2
+  rename_i right left
+  rw [right] at h
+  contradiction
+
+
 
 private theorem isInf_false_of_isNormal (f : F32) (h : f.isNormal = true) :
     f.isInf = false := by
-  simp [isInf, isNaN, mantIsZero,isNormal] at *
+  simp [isInf,  mantIsZero,isNormal] at *
   have ⟨exp_nz,exp_max⟩ := h
   intros h1
   simp_all
@@ -902,6 +918,23 @@ private theorem isNaN_false_of_isInf (f:F32) (h:f.isInf = true) :
   intros h1
   exact mantZ
 
+private theorem isNaN_false_of_isZero (f:F32) (h:f.isZero = true) :
+  f.isNaN = false := by
+  simp [isNaN,isZero] at *
+  have ⟨expZero,mantZero⟩ := h
+  intros h1
+  exact mantZero
+private theorem isNaN_false_of_isSubnormal (f:F32) (h:f.isSubnormal = true) :
+  f.isNaN = false := by 
+  simp [isNaN]
+  simp [isSubnormal] at h
+  have ⟨expz,mantz⟩ := h
+  intros h2 
+  simp [expIsZero] at expz
+  simp [expIsMax] at h2
+  rw [expz] at h2
+  contradiction
+  
 
 theorem biject_class_zero (f : F32) :
     f.isZero = true ↔ classify f = .zero := by
@@ -1006,7 +1039,7 @@ constructor
                      simp at h
                      simp_all
 
-theorem biject_class_subn (f:F32) :
+theorem biject_class_normal (f:F32) :
   f.isNormal ↔ (classify f) = .normal :=
 by
 constructor
@@ -1040,7 +1073,7 @@ constructor
                   rw [hInf] at h
                   simp at h
 
-theorem biject_class_normal (f:F32) :
+theorem biject_class_subn (f:F32) :
   f.isSubnormal ↔ (classify f) = .subnormal :=
 by
  constructor
@@ -1154,149 +1187,6 @@ theorem f32nan_to_f64_nan (f : F32) : f.isNaN → (F32.toFloat64 f).isNaN := by
 end F32
 
 
--- ─────────────────────────────────────────────────────────────────────────────
--- §11 (continued): Generic DecodedFloat / rounding correctness
--- ─────────────────────────────────────────────────────────────────────────────
--- These theorems are format-independent: they characterise the common arithmetic
--- core (§4) and the rounding box (§5).  Proofs of format-specific properties
--- (§11c below) should reduce to these.
-
--- ── Commutativity of exact arithmetic ────────────────────────────────────────
-
-/-- addExact is commutative: a + b = b + a (before rounding). -/
-theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
-    addExact rm a b = addExact rm b a := by
-    simp [addExact]
-    cases a with
-    | nan => cases b with
-              | nan => simp
-              | inf => simp
-              | _ => simp
-
-    | inf => cases b with
-              | nan => simp
-              | inf => simp
-                       split
-                       ·
-                          rename_i h1
-                          rename_i h2
-                          rw [h1]
-                          simp
-                       ·
-                          rename_i h1
-                          simp_all
-                          rw [eq_comm]
-                          exact h1
-              | _ => simp
-    | _ => cases b with
-           | nan => simp
-           | inf => simp
-           | _ => simp
-                  split
-                  ·
-                    rename_i sig
-                    cases sig
-                    rename_i right_sig left_sig
-                    rename_i sig exp sign
-                    rename_i sig1 exp1 sign1
-                    rw [right_sig,left_sig]
-                    simp
-                    rw [Bool.and_comm]
-                    rw [Bool.or_comm sig1 sig]
-
-                  ·
-                    rename_i not_sig_sig1
-                    rename_i sig exp sign
-                    rename_i sig1 exp1 sign1
-                    split
-                    ·
-                      rw [And.comm] at not_sig_sig1
-                      simp [not_sig_sig1]
-                      rename_i sign1_z
-                      simp [sign1_z] at not_sig_sig1
-                      simp [not_sig_sig1]
-                    ·
-                      rename_i sign1_z
-                      split
-                      ·
-                        rename_i sign_z
-                        simp
-                        intros h1 h2
-                        contradiction
-                      ·
-                        rename_i signNz
-                        split
-                        ·
-                          rename_i sig_e_sig1
-                          simp [not_sig_sig1]
-                          rw [And.comm] at not_sig_sig1
-                          simp [not_sig_sig1]
-                          simp [sig_e_sig1]
-                          simp [not_sig_sig1]
-                          split
-                          ·
-                            rename_i exp1_l_exp
-                            simp
-                            -- split the and goal
-                            constructor
-                            ·
-                              intros exp_l_exp1
-                              omega
-                            ·
-                              split
-                              ·
-                                rename_i exp_l_exp1
-                                simp_all
-                                have exp_e_expq : exp - exp1 = 0 := by omega
-                                have expq_e_exp : exp1 - exp = 0 :=  by omega
-                                simp [exp_e_expq]
-                                simp [expq_e_exp]
-                                simp [Nat.add_comm]
-                              ·
-                                rename_i exp_nl_exp1
-                                simp_all
-                                rw [Nat.add_comm]
-                          ·
-                            rename_i exp1_nl_exp
-                            simp_all
-                            constructor
-                            ·
-                              intros
-                              rename_i exp1_l_exp
-                              omega
-                            ·
-                              have h_le : exp ≤ exp1 := Int.le_of_lt exp1_nl_exp
-                              rw [if_pos h_le]
-                              simp
-                              rw [Nat.add_comm]
-                        ·
-                          sorry
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/-- mulExact is commutative: a × b = b × a (before rounding). -/
-theorem mulExact_comm (a b : DecodedFloat) :
-    mulExact a b = mulExact b a := by sorry
-
--- ── roundTo: special-value fixed points ──────────────────────────────────────
-
 /-- roundTo is a no-op on .nan (returns .nan with no flags). -/
 theorem roundTo_nan (fmt : FPFormat) (rm : RoundMode) :
     roundTo fmt rm .nan = (.nan, ExcFlags.empty) := by
@@ -1321,10 +1211,20 @@ theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
     simp at hres
     simp [DecodedFloat.dfSign]
     simp [DecodedFloat.isZero] at hres
-    generalize h_round : (roundTo fmt rm (DecodedFloat.finite s e sig)).fst = res at *
+    
     cases res
     ·
-       sorry
+      rw [← h_round] at hres
+      rw [← h_round]
+      unfold roundTo
+      simp
+      split
+      {
+        rename_i mant exp sign ifb
+        si
+      }
+
+      contradiction
 
 
 
@@ -1502,6 +1402,9 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
   have hNotZero : f.isZero = false := by simp [isZero, hExpZero]
   -- Reduce decode to the normal case: rawExp = expRaw.toNat
   simp only [decode, hNotNaN, hNotInf, hNotZero, h, ite_true]
+  unfold encode
+  simp
+
   -- Goal: encode (.finite f.sign (↑expRaw.toNat - 127 - 23) f.significand.toNat) = f
   --
   -- Remaining proof steps (see sorry):
@@ -1587,18 +1490,142 @@ theorem fadd_nan_l (rm : RoundMode) (a b : F32) (h : a.isNaN) :
     (F32.fadd rm a b).isNaN := by
     simp [F32.fadd]
     simp [faddEx]
-    cases rm
+    simp [addExact]
+    split 
     ·
-      sorry
-
+      simp_all
+      simp [roundTo]
+      simp [encode]
+      decide
+    · 
+      simp 
+      simp [roundTo]
+      simp [encode]
+      decide
+    ·
+      rename_i da db sa sb heqa heqb
+      simp [decode] at heqa 
+      rw [h ] at heqa
+      simp at heqa 
+    ·
+      rename_i da db sa sb heqa heqb 
+      simp [decode] at sb 
+      rw [h] at sb 
+      simp_all 
+    · 
+      rename_i da db s heq ad x
+      simp 
+      simp [decode] at ad 
+      simp [h] at ad 
+    · 
+      rename_i ad bd 
+      rename_i sigb eb sb 
+      rename_i siga ea sa 
+      rename_i dfa dfb 
+      simp [decode] at ad
+      simp [h] at ad
+     
 theorem fadd_nan_r (rm : RoundMode) (a b : F32) (h : b.isNaN) :
     (F32.fadd rm a b).isNaN := by
     simp [F32.fadd]
     simp [faddEx]
+    simp [decode]
+    rw [h]
+    simp
+    cases ca: (classify a) with
+    | zero =>
+          have aZ  : a.isZero := by
+                     have bja := biject_class_zero a
+                     rw [ca] at bja
+                     simp at bja
+          simp [aZ]
+          have anNan : a.isNaN = false := by
+                       have nana := isNaN_false_of_isZero a
+                       apply nana
+                       exact aZ
+          have anInf : a.isInf = false := by
+                       have infa := isInf_false_of_isZero a
+                       apply infa
+                       exact aZ
+          simp [anNan,anInf]
+          cases a.sign <;>
+           simp [addExact]  <;>
+           simp [roundTo] <;>
+           simp [encode] <;>
+           decide
+    | subnormal =>
+          have aSn : a.isSubnormal := by
+                     have bsub := biject_class_subn a
+                     rw [ca] at bsub
+                     simp at bsub
+                     exact bsub
+          have anNan : a.isNaN = false := by 
+                       have nana := isNaN_false_of_isSubnormal a
+                     
+
+
+
+
 
 
 theorem fmul_nan_l (rm : RoundMode) (a b : F32) (h : a.isNaN) :
-    (F32.fmul rm a b).isNaN := by sorry
+    (F32.fmul rm a b).isNaN := by
+    simp [F32.fmul ]
+    simp [fmulEx]
+    simp [mulExact] 
+    split 
+    {
+    simp 
+    simp [roundTo]
+    simp [encode]
+    decide
+    }
+    {
+    simp 
+    simp [roundTo]
+    simp [encode]
+    decide
+    }
+    {
+    simp 
+    simp [roundTo]
+    simp [encode]
+    decide
+    }
+    {
+    simp 
+    simp [roundTo]
+    simp [encode]
+    decide 
+    }
+    {
+    simp 
+    simp [roundTo]
+    simp [encode]
+    simp [pack]
+    rename_i ad bd 
+    rename_i abool bbool
+    simp [isNaN]
+    constructor
+    ·
+      simp [expIsMax]
+      simp [expRaw]
+      split 
+      ·
+        decide 
+      ·
+        decide 
+    ·
+      simp [mantIsZero]
+      split
+      ·
+        simp [mantissa]
+      · 
+        simp [mantissa]
+    
+}
+    }
+
 
 theorem fmul_nan_r (rm : RoundMode) (a b : F32) (h : b.isNaN) :
     (F32.fmul rm a b).isNaN := by sorry
@@ -1781,8 +1808,107 @@ theorem fsqrt_neg_isNaN (rm : RoundMode) (a : F32)
     ·
       simp [expIsMax]
       simp [mantIsZero]
-      simp [encode]
-      sorry
+      constructor 
+      · 
+        simp [decode]
+        split 
+        · 
+          simp [sqrtExact]
+          simp [roundTo]
+          simp [encode]
+          simp [expRaw]
+          decide
+        ·
+          rename_i anotNan
+          split
+          · 
+            simp [sqrtExact]
+            split 
+            ·
+              simp 
+              simp [roundTo]
+              simp [encode]
+              decide
+            ·
+             simp
+             simp [roundTo]
+             simp [encode]
+             simp [pack]
+             decide
+            ·
+              simp 
+              simp [roundTo]
+              simp [encode]
+              decide
+            ·
+              simp 
+              simp [roundTo]
+              simp [encode]
+              simp [pack]
+              rename_i heq 
+              rename_i  ainf a1 s exp  
+              simp at heq
+            ·
+              simp 
+              simp [roundTo]
+              simp [encode]
+              decide
+          · {
+            rename_i anotinf
+            simp [sqrtExact]
+            split 
+            {
+              simp 
+              simp [roundTo]
+              simp [encode]
+              decide
+            }
+            {
+              simp 
+              simp [roundTo]
+              simp [encode]
+              simp [pack]
+              decide
+            }
+            {
+              simp 
+              simp [roundTo]
+              simp [encode]
+              decide
+            }
+            {
+              rename_i a1 s exp df
+              simp
+              simp [roundTo]
+              simp [encode]
+              simp [pack]
+              simp_all 
+              have ⟨left,right⟩ := df
+              cases aNorm : a.isNormal 
+              ·
+                simp [aNorm] at right 
+                have ⟨rr,ll⟩ := right 
+                simp [isNormal] at aNorm
+                decide
+                
+              
+              
+}
+            
+             
+           
+           
+}
+        } 
+    
+                         
+                        
+            
+
+
+             
+                          
+
 
 /-- √(-∞) raises invalidOp and returns NaN (§7.2). -/
 theorem fsqrt_negInf_isNaN (rm : RoundMode) :
@@ -1870,23 +1996,48 @@ theorem fsqrt_negZero (rm : RoundMode) :
 
 
 /-- The result of fsqrt is always non-negative when it is not NaN. -/
-theorem fsqrt_nonneg (rm : RoundMode) (a : F32) (h : ¬(F32.fsqrt rm a).isNaN) :
+theorem fsqrt_nonneg (rm : RoundMode) (a : F32) (h : ¬(F32.fsqrt rm a).isNaN) (anNeg : 
+a.sign = false) :
     (F32.fsqrt rm a).sign = false := by
    -- simp at h
    -- simp [isNaN] at h
-    simp [fsqrt]
-    simp [fsqrtEx]
-    cases hcls: classify a
-    ·
-      have zero_is_zero : a.isZero = true := by
-        unfold classify at hcls; split at hcls; assumption
-
-        split at hcls
-        ·
-          rename_i a_subn
-          contra
-
-
+    cases ha : classify a 
+    · 
+      have aZ : a.isZero = true := by 
+                have bj := biject_class_zero a
+                have ⟨left,right⟩ := bj
+                rw [ ha] at right  
+                simp at right 
+                exact right
+      simp [fsqrt]
+      simp [fsqrtEx]
+      simp[ sqrtExact ]
+      split 
+      . 
+        simp 
+        simp [roundTo]
+        simp [encode]
+        decide
+      · 
+        simp
+        simp [roundTo]
+        simp [encode] 
+        simp [pack]
+        decide 
+      ·
+        simp 
+        simp [roundTo]
+        simp [encode]
+        decide
+      · 
+        simp 
+        simp [roundTo]
+        simp [encode]
+        simp [pack]
+        rename_i df s exp ad
+        simp[decode] at ad 
+        have aNann : a.isNaN = false := by 
+                     appl
 /-- The flags from fsqrtEx are the union of those from sqrtExact and roundTo
     (same flag-threading invariant as fmaEx). -/
 theorem fsqrtEx_flags_eq (rm : RoundMode) (a : F32) :

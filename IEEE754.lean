@@ -1204,12 +1204,49 @@ theorem roundTo_zero (fmt : FPFormat) (rm : RoundMode) (s : Bool) (e : Int) :
 
 /-- Rounding a nonzero finite value preserves sign (unless the result underflows to zero). -/
 theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
-    {s : Bool} {e : Int} {sig : Nat} (hne : sig ≠ 0)
-    (hres : ¬((roundTo fmt rm (.finite s e sig)).1).isZero) :
-    ((roundTo fmt rm (.finite s e sig)).1).dfSign = s := by
-    have hrf := (roundTo fmt rm (.finite s e sig))
+    {f: DecodedFloat} (hne : sig ≠ 0)
+    (hf : f.isFinite = true)
+    (hres : ¬((roundTo fmt rm f).1).isZero) :
+    ((roundTo fmt rm f).1).dfSign = f.dfSign := by
     simp [DecodedFloat.dfSign]
-    sorry
+    split
+    ·
+      rename_i x a heq
+      split
+      ·
+        simp [DecodedFloat.isZero] at hres
+        simp [roundTo] at hres
+        simp_all
+        simp_all
+
+
+    simp at hne
+    simp at hres
+    simp [roundTo]
+    split
+    ·
+      simp
+    ·
+      simp
+
+    ·
+      rename_i ds sig
+      by_cases hds: ds
+      ·
+        simp
+        rw [hds]
+        simp [DecodedFloat.dfSign]
+      ·
+        simp [DecodedFloat.dfSign]
+    ·
+      split
+      ·
+        simp [DecodedFloat.dfSign]
+      ·
+        split
+        ·
+          simp
+
 
 
 
@@ -1225,10 +1262,55 @@ theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
     and the same result. -/
 theorem roundTo_idempotent (fmt : FPFormat) (rm : RoundMode) (d : DecodedFloat) :
     roundTo fmt rm (roundTo fmt rm d).1 = ((roundTo fmt rm d).1, ExcFlags.empty) := by
-    simp [roundTo]
-    split
+    cases d
+    ·
+      simp [roundTo]
+      split <;>
+      split
       ·
         simp_all
+      ·
+        simp_all
+      ·
+        simp_all
+      ·
+        split 
+        ·
+          simp_all 
+        ·
+          split
+          · 
+            simp_all
+          ·
+            simp_all 
+      ·
+        simp_all 
+      ·
+        simp_all
+      ·
+        simp_all
+      ·
+        rename_i heq   
+        rename_i x 
+        rename_i heq1 heq d s e sig
+        split at heq1
+        
+      ·
+        simp_all
+
+
+
+
+
+    ·
+      simp [roundTo]
+    ·
+      simp [roundTo]
+    ·
+
+
+
+
 
 -- ── NaN / Inf propagation through addExact / mulExact ────────────────────────
 -- adding nan left will result nan and no flags will be there
@@ -1410,12 +1492,15 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
     simp [significand]  at right
     rw [h] at right
     simp at right
-    rw []
+    simp [isNormal] at h
+    have ⟨ hl , hr ⟩ := h
+    simp [pack]
 
     have pack_f : (pack f.sign f.expRaw f.significand.toNat) = f := by
          simp [pack]
     cases s
     ·
+      rw [← pack_f ]
       simp_all
 
 
@@ -1474,10 +1559,26 @@ theorem encode_decode_subnormal {f : F32} (h : f.isSubnormal) :
   --   3. encode hits the subnormal branch:
   --      subSig = mantissa.toNat &&& (2^23 - 1) = mantissa.toNat
   --   4. pack f.sign 0 f.mantissa = f  (subnormal has expRaw = 0 by expIsZero = true)
-  sorry
+  simp [encode]
+  split
+  ·
+     simp_all
+  ·
+    simp_all
+  ·
+    simp_all
+    rename_i d s exp u
+    have ⟨ ul, um ,ur ⟩ := u
 
 
-/-- Encoding .nan always produces a NaN bit pattern. -/
+    simp [isSubnormal] at h
+    simp [isSubnormal] at h
+  ·
+    split
+    ·
+
+
+/-- Ecoding .nan always produces a NaN bit pattern. -/
 theorem encode_nan_isNaN : (F32.encode DecodedFloat.nan).isNaN := by
   simp [F32.encode]
   native_decide
@@ -2088,7 +2189,10 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
 
 /-- fadd is commutative (bit-exact result). -/
 theorem fadd_comm (rm : RoundMode) (a b : F32) :
-    F32.fadd rm a b = F32.fadd rm b a := by sorry
+    F32.fadd rm a b = F32.fadd rm b a := by 
+    simp [fadd]
+    simp [faddEx]
+    rw [addExact_comm] -- this is in the other file
 
 /-- fmul is commutative (bit-exact result). -/
 theorem fmul_comm (rm : RoundMode) (a b : F32) :
@@ -2097,26 +2201,47 @@ theorem fmul_comm (rm : RoundMode) (a b : F32) :
 -- ── G. Ordering (IEEE 754-2019 §5.10, §5.11) ─────────────────────────────────
 
 /-- flt is irreflexive: a value is never strictly less than itself. -/
-theorem flt_irrefl (a : F32) : F32.flt a a = false := by sorry
+theorem flt_irrefl (a : F32) : F32.flt a a = false := by 
+  simp [flt]
+  split <;> simp_all
 
 /-- flt is asymmetric. -/
-theorem flt_asymm {a b : F32} (h : F32.flt a b) : F32.flt b a = false := by sorry
+theorem flt_asymm {a b : F32} (h : F32.flt a b) : F32.flt b a = false := by 
+  simp [flt]
+  split <;> simp_all
 
 /-- flt is transitive. -/
 theorem flt_trans {a b c : F32}
-    (h1 : F32.flt a b) (h2 : F32.flt b c) : F32.flt a c := by sorry
+    (h1 : F32.flt a b) (h2 : F32.flt b c) : F32.flt a c := by 
+    simp [flt]
+    split <;> simp_all
 
 /-- NaN comparisons always return false (IEEE 754 §5.11 "unordered"). -/
-theorem flt_nan_l (a b : F32) (h : a.isNaN) : F32.flt a b = false := by sorry
-theorem flt_nan_r (a b : F32) (h : b.isNaN) : F32.flt a b = false := by sorry
-theorem feq_nan_l (a b : F32) (h : a.isNaN) : F32.feq a b = false := by sorry
-theorem feq_nan_r (a b : F32) (h : b.isNaN) : F32.feq a b = false := by sorry
+theorem flt_nan_l (a b : F32) (h : a.isNaN) : F32.flt a b = false := by 
+  simp [flt]
+  split  <;> simp_all
+
+theorem flt_nan_r (a b : F32) (h : b.isNaN) : F32.flt a b = false := by 
+  simp [flt]
+  split <;> simp_all
+
+theorem feq_nan_l (a b : F32) (h : a.isNaN) : F32.feq a b = false := by 
+  simp [feq]
+  simp_all
+theorem feq_nan_r (a b : F32) (h : b.isNaN) : F32.feq a b = false := by
+  simp [feq]
+  simp_all
+
 
 -- ── H. Cancellation and additive identity ─────────────────────────────────────
 
 /-- x − x = ±0 for any finite non-NaN (IEEE 754 cancellation). -/
 theorem fsub_self_isZero (rm : RoundMode) (a : F32) (h : ¬a.isNaN) (hi : ¬a.isInf) :
-    (F32.fsub rm a a).isZero := by sorry
+    (F32.fsub rm a a).isZero := by 
+  simp [fsub]
+  simp [faddEx]
+  simp [negate]
+  
 
 /-- +0 is a right additive identity under IEEE equality (for non-NaN a). -/
 theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
@@ -2407,9 +2532,67 @@ a.sign = false) :
         simp [encode]
         simp [pack]
         rename_i df s exp ad
-        simp[decode] at ad
-        have aNann : a.isNaN = false := by
-                     appl
+        by_cases hs: s
+        ·
+          rw [hs]
+          simp_all
+          simp [decode] at ad
+          simp_all
+          have a_notNaN :a.isNaN = false :=  isNaN_false_of_isZero a aZ
+          have a_notInf :a.isInf = false := isInf_false_of_isZero a aZ
+          rw [a_notNaN,a_notInf] at ad
+          simp_all
+        ·
+          simp_all
+          native_decide
+    ·
+      simp [fsqrt]
+      simp [fsqrtEx]
+      simp [decode]
+      split
+      ·
+        simp [sqrtExact]
+        simp [roundTo]
+        simp [encode]
+        native_decide
+      ·
+        rename_i hnan
+        simp_all
+        split
+        ·
+          simp [sqrtExact]
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          split
+          ·
+            simp [sqrtExact]
+            simp [roundTo]
+            simp [encode]
+            native_decide
+          ·
+            simp [sqrtExact]
+            simp [roundTo]
+            simp [encode]
+            split
+            ·
+              native_decide
+            ·
+              rename_i heq s
+
+              by_cases heq
+              ·
+                simp_all
+              ·
+                rename_i heq
+                simp at heq
+                rw [heq]
+                native_decide
+
+    ·
+
+
 /-- The flags from fsqrtEx are the union of those from sqrtExact and roundTo
     (same flag-threading invariant as fmaEx). -/
 theorem fsqrtEx_flags_eq (rm : RoundMode) (a : F32) :

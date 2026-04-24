@@ -1406,14 +1406,14 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
     simp_all
     have ⟨left,mid,right⟩ := heq
     simp [expRaw] at mid
-    simp_all 
+    simp_all
     simp [significand]  at right
-    rw [h] at right 
-    simp at right 
+    rw [h] at right
+    simp at right
     rw []
 
-    have pack_f : (pack f.sign f.expRaw f.significand.toNat) = f := by 
-         simp [pack] 
+    have pack_f : (pack f.sign f.expRaw f.significand.toNat) = f := by
+         simp [pack]
     cases s
     ·
       simp_all
@@ -1708,13 +1708,13 @@ theorem fdiv_nan_l (rm : RoundMode) (a b : F32) (h : a.isNaN) :
     (F32.fdiv rm a b).isNaN := by
     simp [isNaN]
     constructor <;>
-    { 
-      simp [fdiv] 
-      simp [fdivEx] 
+    {
+      simp [fdiv]
+      simp [fdivEx]
       simp [decode]
-      rw [ h ] 
-      simp 
-      simp [divExact] 
+      rw [ h ]
+      simp
+      simp [divExact]
       simp [divExactWith]
       simp [roundTo]
       simp [encode]
@@ -1722,25 +1722,25 @@ theorem fdiv_nan_l (rm : RoundMode) (a b : F32) (h : a.isNaN) :
     }
 
 theorem fdiv_nan_r (rm : RoundMode) (a b : F32) (h : b.isNaN) :
-    (F32.fdiv rm a b).isNaN := by 
+    (F32.fdiv rm a b).isNaN := by
     simp [isNaN]
     constructor <;>
-    { 
-      simp [fdiv] 
-      simp [fdivEx] 
+    {
+      simp [fdiv]
+      simp [fdivEx]
       simp [decode]
-      rw [ h ] 
-      simp 
-      simp [divExact] 
-      split     
-      · { 
+      rw [ h ]
+      simp
+      simp [divExact]
+      split
+      · {
         simp [divExactWith]
         simp [roundTo]
         simp [encode]
         native_decide
       }
       · {
-        split 
+        split
         · {
           simp [divExactWith]
           simp [roundTo]
@@ -1748,7 +1748,7 @@ theorem fdiv_nan_r (rm : RoundMode) (a b : F32) (h : b.isNaN) :
           native_decide
         }
         · {
-          split 
+          split
           · {
             simp [divExactWith]
             simp [roundTo]
@@ -1764,27 +1764,27 @@ theorem fdiv_nan_r (rm : RoundMode) (a b : F32) (h : b.isNaN) :
             }
           }
       }
-    } 
-    
+    }
+
 
 
 theorem fma_nan_a (rm : RoundMode) (a b c : F32) (h : a.isNaN) :
-    (F32.fma rm a b c).isNaN := by 
-    simp [isNaN] 
+    (F32.fma rm a b c).isNaN := by
+    simp [isNaN]
     constructor <;>
     · {
       simp [fma, fmaEx,decode]
       rw [h]
-      simp_all 
+      simp_all
       simp [fmaExact]
       simp [roundTo]
       simp [encode]
       native_decide
     }
-   
+
 
 theorem fma_nan_b (rm : RoundMode) (a b c : F32) (h : b.isNaN) :
-    (F32.fma rm a b c).isNaN := by 
+    (F32.fma rm a b c).isNaN := by
     simp [isNaN]
     constructor <;>
     sorry
@@ -1793,14 +1793,14 @@ theorem fma_nan_b (rm : RoundMode) (a b c : F32) (h : b.isNaN) :
 
 
 theorem fma_nan_c (rm : RoundMode) (a b c : F32) (h : c.isNaN) :
-    (F32.fma rm a b c).isNaN := by 
+    (F32.fma rm a b c).isNaN := by
     sorry
 
 -- ── C. Invalid operations → NaN (IEEE 754-2019 §7.2) ─────────────────────────
 
 /-- ∞ × 0 is an invalid operation; result is NaN (§7.2 case d). -/
 theorem fmul_inf_zero {rm : RoundMode} {a b : F32}
-    (ha : a.isInf) (hb : b.isZero) : (F32.fmul rm a b).isNaN := by 
+    (ha : a.isInf) (hb : b.isZero) : (F32.fmul rm a b).isNaN := by
     have a_notn : a.isNaN = false := isNaN_false_of_isInf a ha
     have b_notn : b.isNaN = false := isNaN_false_of_isZero b hb
     have b_notinf : b.isInf = false := isInf_false_of_isZero b hb
@@ -1815,14 +1815,14 @@ theorem fmul_inf_zero {rm : RoundMode} {a b : F32}
       simp [encode]
       native_decide
 
-    
+
 
 
 
 
 
 theorem fmul_zero_inf {rm : RoundMode} {a b : F32}
-    (ha : a.isZero) (hb : b.isInf) : (F32.fmul rm a b).isNaN := by 
+    (ha : a.isZero) (hb : b.isInf) : (F32.fmul rm a b).isNaN := by
     have b_notn : b.isNaN = false := isNaN_false_of_isInf b hb
     have a_notn : a.isNaN = false := isNaN_false_of_isZero a ha
     have a_notinf : a.isInf = false := isInf_false_of_isZero a ha
@@ -1842,7 +1842,7 @@ theorem fmul_zero_inf {rm : RoundMode} {a b : F32}
 /-- (+∞) + (−∞) is an invalid operation; result is NaN (§7.2 case f). -/
 theorem fadd_inf_opp {rm : RoundMode} {a b : F32}
     (ha : a.isInf) (hb : b.isInf) (hs : a.sign ≠ b.sign) :
-    (F32.fadd rm a b).isNaN := by 
+    (F32.fadd rm a b).isNaN := by
     have a_notn : a.isNaN = false := isNaN_false_of_isInf a ha
     have b_notn : b.isNaN = false := isNaN_false_of_isInf b hb
     have b_notz : b.isZero = false := isZero_false_of_isInf b hb
@@ -1854,18 +1854,18 @@ theorem fadd_inf_opp {rm : RoundMode} {a b : F32}
       simp [a_notn , ha]
       simp [b_notn,  hb]
       simp [addExact]
-      split  
-      · 
+      split
+      ·
         simp_all
       ·
-        simp [roundTo]  
+        simp [roundTo]
         simp [encode]
         native_decide
-    
+
 
 /-- 0 / 0 is an invalid operation; result is NaN (§7.2 case g). -/
 theorem fdiv_zero_zero {rm : RoundMode} {a b : F32}
-    (ha : a.isZero) (hb : b.isZero) : (F32.fdiv rm a b).isNaN := by 
+    (ha : a.isZero) (hb : b.isZero) : (F32.fdiv rm a b).isNaN := by
     have a_notn : a.isNaN = false := isNaN_false_of_isZero a ha
     have b_notn : b.isNaN = false := isNaN_false_of_isZero b hb
     have b_notInf : b.isInf = false := isInf_false_of_isZero b hb
@@ -1879,10 +1879,23 @@ theorem fdiv_zero_zero {rm : RoundMode} {a b : F32}
     simp [divExact, divExactWith, roundTo, encode]
     native_decide
     }
-      
+
 /-- ∞ / ∞ is an invalid operation; result is NaN (§7.2 case h). -/
 theorem fdiv_inf_inf {rm : RoundMode} {a b : F32}
-    (ha : a.isInf) (hb : b.isInf) : (F32.fdiv rm a b).isNaN := by sorry
+    (ha : a.isInf) (hb : b.isInf) : (F32.fdiv rm a b).isNaN := by
+    have a_notn : a.isNaN = false := isNaN_false_of_isInf a ha
+    have b_notn : b.isNaN = false := isNaN_false_of_isInf b hb
+    have b_notz : b.isZero = false := isZero_false_of_isInf b hb
+    have a_notz : a.isZero = false := isZero_false_of_isInf a ha
+    simp [isNaN]
+    constructor <;>
+    {
+    simp [fdiv, fdivEx,decode]
+    simp [a_notn , ha]
+    simp [b_notn,  hb ]
+    simp [divExact, divExactWith, roundTo, encode]
+    native_decide
+    }
 
 /-- ∞ × 0 in fma is invalid regardless of the addend c (§7.2 case d). -/
 theorem fma_inf_zero {rm : RoundMode} {a b c : F32}
@@ -1903,7 +1916,149 @@ theorem fmul_inf_nonzero {rm : RoundMode} {a b : F32}
 /-- Nonzero finite / 0 = ∞ (division by zero; §7.3). -/
 theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}
     (ha : a.isFinite) (hna : ¬a.isZero) (hb : b.isZero) :
-    (F32.fdiv rm a b).isInf := by sorry
+    (F32.fdiv rm a b).isInf := by
+    have b_ninf : b.isInf = false := isInf_false_of_isZero b hb
+    have b_notn : b.isNaN = false := isNaN_false_of_isZero b hb
+    simp [isFinite] at ha
+    have a_notn : a.isNaN = false := by
+                                     simp [isNaN]
+                                     intros
+                                     simp_all
+    have a_notinf : a.isInf = false := by
+                                       simp [isInf]
+                                       intros
+                                       simp_all
+
+    simp [isInf]
+    constructor
+    · {
+      simp [fdiv, fdivEx,decode, a_notn, a_notinf]
+      simp_all
+      simp [divExact]
+      split
+      · {
+        simp [divExactWith]
+        split
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          bv_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          bv_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          simp_all
+          rename_i h a b sa exp1 sig sb sexp x heq1 heq
+          by_cases sa <;> by_cases sb <;> simp_all <;> native_decide
+        ·
+          rename_i h da db sa exp1 sb exp sig x heq1 heq
+          by_cases sa <;> by_cases sb <;> simp_all
+        ·
+          rename_i h a b sa ea siga sb eb sigb x2 x1 x heq1 heq
+          by_cases sa <;> by_cases sb <;> simp_all
+        }
+      · {
+        simp [divExactWith]
+        split
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        ·
+          rename_i h a b sa sb exp sig heq1 heq
+          by_cases sa <;> by_cases sb <;> simp_all
+        ·
+          rename_i h a b sa exp sig sb heq1 heq
+          by_cases sa <;> by_cases sb <;> simp_all
+        ·
+          rename_i h a b sa exp1 sig sb exp x heq1 heq
+          by_cases sa <;> by_cases sb <;> simp_all  <;>
+          simp [roundTo] <;>
+          simp [encode] <;>
+          native_decide
+        ·
+          rename_i heq1 heq
+          rename_i sb exp sig x
+          rename_i h da db sa exp
+          simp [roundTo]
+          simp [encode]
+          by_cases sa <;> by_cases sb <;> simp_all
+        ·
+          rename_i   h a b sa ea siga sb eb sigb x2 x1 x  heq1 heq
+          split
+          ·
+            simp [roundTo]
+            split
+            ·
+              simp [encode]; native_decide
+            ·
+              simp [encode]
+              rename_i  s heq
+              by_cases hs: s
+              ·
+                simp [hs]
+                native_decide
+              ·
+                simp [hs]
+                native_decide
+            ·
+              simp [encode]
+              rename_i s exp heq
+              by_cases hs : s
+              ·
+                simp [hs]
+                simp_all
+              ·
+                simp [hs]
+                simp_all
+            ·
+              rename_i  heq1  heq2  h d  s  e sig  x heq
+              simp at heq
+              have ⟨heql,heqm,helql⟩ := heq
+              split
+              ·
+                simp_all
+              ·
+                simp_all
+        }
+   }
+   ·
+   {
+
+   }
+
+
 
 -- ── E. Sign rules (IEEE 754-2019 §6.3) ───────────────────────────────────────
 

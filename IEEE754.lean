@@ -1888,8 +1888,37 @@ theorem fma_nan_b (rm : RoundMode) (a b c : F32) (h : b.isNaN) :
     (F32.fma rm a b c).isNaN := by
     simp [isNaN]
     constructor <;>
-    sorry
-
+    · {
+      simp [fma]
+      simp [fmaEx]
+      simp [fmaExact]
+      split 
+      · { 
+        simp [roundTo]
+        simp [encode]
+        native_decide
+      }
+      · {
+        simp [roundTo]
+        simp [encode]
+        native_decide
+      }
+      · {
+        simp [roundTo]
+        simp [encode] 
+        native_decide
+      }
+      · {
+        simp [roundTo]
+        simp [encode]
+        native_decide
+      }
+      · {
+        rename_i hx hx1 hx2 hx3 da db
+        simp [decode] at hx3
+        simp_all 
+      }
+    } 
 
 
 

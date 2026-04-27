@@ -1185,6 +1185,222 @@ theorem f32nan_to_f64_nan (f : F32) : f.isNaN → (F32.toFloat64 f).isNaN := by
   native_decide
 
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- §11 (continued): Generic DecodedFloat / rounding correctness
+-- ─────────────────────────────────────────────────────────────────────────────
+-- These theorems are format-independent: they characterise the common arithmetic
+-- core (§4) and the rounding box (§5).  Proofs of format-specific properties
+-- (§11c below) should reduce to these.
+
+-- ── Commutativity of exact arithmetic ────────────────────────────────────────
+
+/-- addExact is commutative: a + b = b + a (before rounding). -/
+
+
+theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
+    addExact rm a b = addExact rm b a := by
+    induction a with 
+    |  finite signa expa siga => induction b with 
+                              | finite signb expb sigb => simp [addExact]
+                                                          · {
+                                                            simp [bne]
+                                                            simp [Bool.beq_comm]
+                                                            }
+                                                          · {
+                                                            constructor <;>
+                                                            ac_rfl
+                                                            }
+                              | inf signb  =>  simp [mulExact]
+                                               split    
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }    
+                                               · {
+                                                 simp_all
+                                                 simp [bne]
+                                                 simp [Bool.beq_comm]
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                              | nan => simp [mulExact]
+                                       
+    | inf signa => simp [mulExact] 
+                   split  
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     simp [bne]
+                     simp [Bool.beq_comm]
+                     }
+                   · {
+                     simp_all
+                     simp [bne]
+                     simp [Bool.beq_comm]
+                     }  
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+    | nan => simp [mulExact]
+             split
+             · {
+               simp_all
+              }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+
+
+
+
+
+/-- mulExact is commutative: a × b = b × a (before rounding). -/
+theorem mulExact_comm (a b : DecodedFloat) :
+    mulExact a b = mulExact b a := by
+    induction a with 
+    |  finite signa expa siga => induction b with 
+                              | finite signb expb sigb => simp [mulExact]; constructor 
+                                                          · {
+                                                            simp [bne]
+                                                            simp [Bool.beq_comm]
+                                                            }
+                                                          · {
+                                                            constructor <;>
+                                                            ac_rfl
+                                                            }
+                              | inf signb  =>  simp [mulExact]
+                                               split    
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }    
+                                               · {
+                                                 simp_all
+                                                 simp [bne]
+                                                 simp [Bool.beq_comm]
+                                                 }
+                                               · {
+                                                 simp_all
+                                                 }
+                              | nan => simp [mulExact]
+                                       
+    | inf signa => simp [mulExact] 
+                   split  
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     simp [bne]
+                     simp [Bool.beq_comm]
+                     }
+                   · {
+                     simp_all
+                     simp [bne]
+                     simp [Bool.beq_comm]
+                     }  
+                   · {
+                     simp_all
+                     }
+                   · {
+                     simp_all
+                     }
+    | nan => simp [mulExact]
+             split
+             · {
+               simp_all
+              }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
+             · {
+               simp_all
+               }
 
 /-- roundTo is a no-op on .nan (returns .nan with no flags). -/
 theorem roundTo_nan (fmt : FPFormat) (rm : RoundMode) :
@@ -1924,7 +2140,43 @@ theorem fma_nan_b (rm : RoundMode) (a b c : F32) (h : b.isNaN) :
 
 theorem fma_nan_c (rm : RoundMode) (a b c : F32) (h : c.isNaN) :
     (F32.fma rm a b c).isNaN := by
-    sorry
+  simp[fma]
+  simp [fmaEx]
+  simp [fmaExact]
+  split 
+  · {
+     simp [roundTo]
+     simp [encode]
+     native_decide
+   }
+  · {
+     simp [roundTo]   
+     simp [encode]
+     native_decide
+   }
+  · {
+    simp [roundTo]
+    simp [encode]
+    native_decide
+  }
+  · {
+    simp [roundTo]
+    simp [encode]
+    native_decide
+  }
+  · {
+    rename_i hx hx1 hx2 hx3 da db
+    simp [decode] 
+    rw [h]
+    simp [decode] at hx2 hx3 
+    simp 
+    rw [addExact_comm] 
+    simp [addExact]
+    simp [roundTo]
+    simp [encode]
+    native_decide
+  }
+
 
 -- ── C. Invalid operations → NaN (IEEE 754-2019 §7.2) ─────────────────────────
 

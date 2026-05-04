@@ -1,4 +1,3 @@
-
 /-
   FPUModel.lean
   =============
@@ -1195,14 +1194,245 @@ theorem f32nan_to_f64_nan (f : F32) : f.isNaN → (F32.toFloat64 f).isNaN := by
 -- ── Commutativity of exact arithmetic ────────────────────────────────────────
 
 /-- addExact is commutative: a + b = b + a (before rounding). -/
+theorem  expb_leq_expa_imp_zero (expb expa : Int) : expb ≤ expa → (expb - expa).toNat = 0 := by
+  intro h
+  simp [Int.toNat]
+  split
+  · {
 
+  }
+  · {
+    rfl
+  }
 
 theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
     addExact rm a b = addExact rm b a := by
-    induction a with 
-    |  finite signa expa siga => induction b with 
-                              | finite signb expb sigb => simp [addExact]
-                                                          · {
+    induction a with
+    | finite signa expa siga => induction b with
+      | finite signb expb sigb =>
+          simp [addExact]
+          · {
+            split
+            · {
+              simp_all
+              ac_rfl
+            }
+            · {
+              simp_all
+              split
+              · {
+                simp_all
+              }
+              · {
+                simp_all
+                split
+                · {
+                  simp_all
+                }
+                · {
+                  split
+                  · {
+                   simp_all
+                   constructor
+                   · {
+                      split <;>
+                      · {
+                        simp_all
+                        intros h
+                        omega
+                      }
+                    }
+                   · {
+                     simp [Nat.add_comm]
+                     split
+                     · {
+                        rename_i heab
+                        simp_all
+                        split
+                        · {
+                          simp_all
+                          rename_i heabl
+                          have heab : expa = expb := by omega
+                          simp [heab]
+                        }
+                        · {
+                           simp_all
+                        }
+                      }
+                     · {
+                        rename_i h3 h2 h1 h
+                        simp_all
+                        have leq_expb_expa: expb ≤ expa := by omega
+                        simp_all
+                      }
+                    }
+                  }
+                  · {
+                    split
+                    · {
+                      simp_all
+                      split
+                      · {
+                        rename_i h4 h3 h2 h1 h
+                        have leq_expa_expb : expa ≤ expb := by omega
+                        have signa_ne_signb : signb ≠ signa := by
+                          intro h
+                          rw [eq_comm] at h
+                          contradiction
+                        simp_all
+                        split
+                        · {
+                          simp_all
+                          split
+                          · {
+                            simp_all
+                            intros hh
+                            constructor <;>
+                            · {
+                              split <;>
+                              · {
+                                simp_all
+                                have expa_ea_expb : expa = expb := by omega
+                                rename_i hh1 hh2 hh3
+                                rw [expa_ea_expb] at hh3
+                                simp_all
+                              }
+                            }
+                          }
+                          · {
+                            intros hh
+                            simp_all
+                            split <;>
+                            · {
+                              rename_i hh1 hh2 hh3
+                              constructor <;>
+                              · {
+                                simp_all
+                              }
+                            }
+                          }
+                        }
+                        · {
+                          split
+                          · {
+                            simp_all
+                            split <;>
+                            · {
+                              simp_all
+                              rename_i  h2 h1 h
+                              have leq_expa_expb : expa ≤ expb := by omega
+                              have signa_ne_signb : signb ≠ signa := by
+                                intro h
+                                rw [eq_comm] at h
+                                contradiction
+                              simp_all
+                              rename_i hh2 hh3
+                              split <;>
+                              · {
+                                simp_all
+                                have expa_ea_expb : expa = expb := by omega
+                                rw [expa_ea_expb] at hh3 h
+                                simp_all
+                                }
+                              }
+                            }
+                          · {
+                            simp_all
+                            split <;>
+                            · {
+                              simp_all
+                            }
+                          }
+                        }
+                      }
+                      · {
+                        simp_all
+                        split
+                        · {
+                          simp_all
+                          split <;>
+                          · {
+                            rename_i h6 h5 h4 h3 h2 h1 h
+                            rw [eq_comm] at h
+                            rw [h] at h4
+                            contradiction
+                          }
+                        }
+                        · {
+                          rename_i  h5 h4 h3 h2 h1 h
+                          split <;>
+                          · {
+                            split
+                            · {
+                              simp_all
+                              rename_i h6 h7
+
+                            }
+                          }
+                        }
+                      }
+                    }
+                    · {
+
+                     }
+
+                       constructor
+                       · {
+                          split <;>
+                          · {
+                            simp_all
+                            intros h
+                            omega
+                          }
+                        }
+                       · {
+                         simp [Nat.add_comm]
+                         split
+                         · {
+                            rename_i heab
+                            simp_all
+                            split
+                            · {
+                              simp_all
+                              rename_i heabl
+                              have heab : expa = expb := by omega
+                              simp [heab]
+                            }
+                            · {
+                               simp_all
+                            }
+                          }
+                          · {
+                            }
+                        }
+                    }
+                 }
+                  · {
+                                                                        simp_all
+                                                                        have hexpbleqexpa : expb ≤ expa := by omega
+                                                                        simp_all
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                  · {
+                                                                    split
+                                                                    · {
+                                                                      simp_all
+                                                                      split
+                                                                      · {
+                                                                        simp_all
+                                                                        have signgb_m_signa : siga - sigb <<< (expb - expa).toNat ≠ 0 := by sigma
+                                                                        simp_all
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                         }
+                                                              }
+                                                            }
                                                             simp [bne]
                                                             simp [Bool.beq_comm]
                                                             }
@@ -1211,7 +1441,7 @@ theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
                                                             ac_rfl
                                                             }
                               | inf signb  =>  simp [mulExact]
-                                               split    
+                                               split
                                                · {
                                                  simp_all
                                                  }
@@ -1229,7 +1459,7 @@ theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
                                                  }
                                                · {
                                                  simp_all
-                                                 }    
+                                                 }
                                                · {
                                                  simp_all
                                                  simp [bne]
@@ -1239,9 +1469,9 @@ theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
                                                  simp_all
                                                  }
                               | nan => simp [mulExact]
-                                       
-    | inf signa => simp [mulExact] 
-                   split  
+
+    | inf signa => simp [mulExact]
+                   split
                    · {
                      simp_all
                      }
@@ -1263,7 +1493,7 @@ theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
                      simp_all
                      simp [bne]
                      simp [Bool.beq_comm]
-                     }  
+                     }
                    · {
                      simp_all
                      }
@@ -1304,104 +1534,112 @@ theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
 /-- mulExact is commutative: a × b = b × a (before rounding). -/
 theorem mulExact_comm (a b : DecodedFloat) :
     mulExact a b = mulExact b a := by
-    induction a with 
-    |  finite signa expa siga => induction b with 
-                              | finite signb expb sigb => simp [mulExact]; constructor 
-                                                          · {
-                                                            simp [bne]
-                                                            simp [Bool.beq_comm]
-                                                            }
-                                                          · {
-                                                            constructor <;>
-                                                            ac_rfl
-                                                            }
-                              | inf signb  =>  simp [mulExact]
-                                               split    
-                                               · {
-                                                 simp_all
-                                                 }
-                                               · {
-                                                 simp_all
-                                                 }
-                                               · {
-                                                 simp_all
-                                                 }
-                                               · {
-                                                 simp_all
-                                                 }
-                                               · {
-                                                 simp_all
-                                                 }
-                                               · {
-                                                 simp_all
-                                                 }    
-                                               · {
-                                                 simp_all
-                                                 simp [bne]
-                                                 simp [Bool.beq_comm]
-                                                 }
-                                               · {
-                                                 simp_all
-                                                 }
-                              | nan => simp [mulExact]
-                                       
-    | inf signa => simp [mulExact] 
-                   split  
-                   · {
-                     simp_all
-                     }
-                   · {
-                     simp_all
-                     }
-                   · {
-                     simp_all
-                     }
-                   · {
-                     simp_all
-                     }
-                   · {
-                     simp_all
-                     simp [bne]
-                     simp [Bool.beq_comm]
-                     }
-                   · {
-                     simp_all
-                     simp [bne]
-                     simp [Bool.beq_comm]
-                     }  
-                   · {
-                     simp_all
-                     }
-                   · {
-                     simp_all
-                     }
-    | nan => simp [mulExact]
-             split
-             · {
-               simp_all
-              }
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
+    induction a with
+    |  finite signa expa siga =>
+        induction b with
+        | finite signb expb sigb =>
+          simp [mulExact]; constructor
+          · {
+            simp [bne]
+            simp [Bool.beq_comm]
+            }
+          · {
+            constructor <;>
+            ac_rfl
+            }
+        | inf signb  =>
+          simp [mulExact]
+          split
+          · {
+            simp_all
+            }
+          · {
+            simp_all
+            }
+          · {
+            simp_all
+            }
+          · {
+            simp_all
+            }
+          · {
+            simp_all
+            }
+          · {
+            simp_all
+            }
+          · {
+            simp_all
+            simp [bne]
+            simp [Bool.beq_comm]
+            }
+          · {
+            simp_all
+            }
+        | nan =>
+          simp [mulExact]
 
+    | inf signa =>
+      simp [mulExact]
+      split
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        simp [bne]
+        simp [Bool.beq_comm]
+        }
+      · {
+        simp_all
+        simp [bne]
+        simp [Bool.beq_comm]
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+    | nan =>
+      simp [mulExact]
+      split
+      · {
+        simp_all
+       }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+      · {
+        simp_all
+        }
+-- when you prove a binary operator is commutative, you can make it an instance of the typeclass, which will allow you to use the commutativity in future proofs without having to invoke the theorem explicitly. However, since we have not yet defined the typeclass for commutativity in this context, we will leave it as a standalone theorem for now.
+--instance Commutative_mulExact : Std.Commutative mulExact :=
+--  { comm := mulExact_comm}
 /-- roundTo is a no-op on .nan (returns .nan with no flags). -/
 theorem roundTo_nan (fmt : FPFormat) (rm : RoundMode) :
     roundTo fmt rm .nan = (.nan, ExcFlags.empty) := by
@@ -1478,51 +1716,9 @@ theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
     and the same result. -/
 theorem roundTo_idempotent (fmt : FPFormat) (rm : RoundMode) (d : DecodedFloat) :
     roundTo fmt rm (roundTo fmt rm d).1 = ((roundTo fmt rm d).1, ExcFlags.empty) := by
-    cases d
-    ·
-      simp [roundTo]
-      split <;>
-      split
-      ·
-        simp_all
-      ·
-        simp_all
-      ·
-        simp_all
-      ·
-        split 
-        ·
-          simp_all 
-        ·
-          split
-          · 
-            simp_all
-          ·
-            simp_all 
-      ·
-        simp_all 
-      ·
-        simp_all
-      ·
-        simp_all
-      ·
-        rename_i heq   
-        rename_i x 
-        rename_i heq1 heq d s e sig
-        split at heq1
-        
-      ·
-        simp_all
-
-
-
-
-
-    ·
-      simp [roundTo]
-    ·
-      simp [roundTo]
-    ·
+    cases fmt
+    · simp [roundTo]
+      
 
 
 
@@ -2108,12 +2304,7 @@ theorem fma_nan_b (rm : RoundMode) (a b c : F32) (h : b.isNaN) :
       simp [fma]
       simp [fmaEx]
       simp [fmaExact]
-      split 
-      · { 
-        simp [roundTo]
-        simp [encode]
-        native_decide
-      }
+      split
       · {
         simp [roundTo]
         simp [encode]
@@ -2121,7 +2312,12 @@ theorem fma_nan_b (rm : RoundMode) (a b c : F32) (h : b.isNaN) :
       }
       · {
         simp [roundTo]
-        simp [encode] 
+        simp [encode]
+        native_decide
+      }
+      · {
+        simp [roundTo]
+        simp [encode]
         native_decide
       }
       · {
@@ -2132,9 +2328,9 @@ theorem fma_nan_b (rm : RoundMode) (a b c : F32) (h : b.isNaN) :
       · {
         rename_i hx hx1 hx2 hx3 da db
         simp [decode] at hx3
-        simp_all 
+        simp_all
       }
-    } 
+    }
 
 
 
@@ -2143,14 +2339,14 @@ theorem fma_nan_c (rm : RoundMode) (a b c : F32) (h : c.isNaN) :
   simp[fma]
   simp [fmaEx]
   simp [fmaExact]
-  split 
+  split
   · {
      simp [roundTo]
      simp [encode]
      native_decide
    }
   · {
-     simp [roundTo]   
+     simp [roundTo]
      simp [encode]
      native_decide
    }
@@ -2166,11 +2362,11 @@ theorem fma_nan_c (rm : RoundMode) (a b c : F32) (h : c.isNaN) :
   }
   · {
     rename_i hx hx1 hx2 hx3 da db
-    simp [decode] 
+    simp [decode]
     rw [h]
-    simp [decode] at hx2 hx3 
-    simp 
-    rw [addExact_comm] 
+    simp [decode] at hx2 hx3
+    simp
+    rw [addExact_comm]
     simp [addExact]
     simp [roundTo]
     simp [encode]
@@ -2470,7 +2666,7 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
 
 /-- fadd is commutative (bit-exact result). -/
 theorem fadd_comm (rm : RoundMode) (a b : F32) :
-    F32.fadd rm a b = F32.fadd rm b a := by 
+    F32.fadd rm a b = F32.fadd rm b a := by
     simp [fadd]
     simp [faddEx]
     rw [addExact_comm] -- this is in the other file
@@ -2482,31 +2678,31 @@ theorem fmul_comm (rm : RoundMode) (a b : F32) :
 -- ── G. Ordering (IEEE 754-2019 §5.10, §5.11) ─────────────────────────────────
 
 /-- flt is irreflexive: a value is never strictly less than itself. -/
-theorem flt_irrefl (a : F32) : F32.flt a a = false := by 
+theorem flt_irrefl (a : F32) : F32.flt a a = false := by
   simp [flt]
   split <;> simp_all
 
 /-- flt is asymmetric. -/
-theorem flt_asymm {a b : F32} (h : F32.flt a b) : F32.flt b a = false := by 
+theorem flt_asymm {a b : F32} (h : F32.flt a b) : F32.flt b a = false := by
   simp [flt]
   split <;> simp_all
 
 /-- flt is transitive. -/
 theorem flt_trans {a b c : F32}
-    (h1 : F32.flt a b) (h2 : F32.flt b c) : F32.flt a c := by 
+    (h1 : F32.flt a b) (h2 : F32.flt b c) : F32.flt a c := by
     simp [flt]
     split <;> simp_all
 
 /-- NaN comparisons always return false (IEEE 754 §5.11 "unordered"). -/
-theorem flt_nan_l (a b : F32) (h : a.isNaN) : F32.flt a b = false := by 
+theorem flt_nan_l (a b : F32) (h : a.isNaN) : F32.flt a b = false := by
   simp [flt]
   split  <;> simp_all
 
-theorem flt_nan_r (a b : F32) (h : b.isNaN) : F32.flt a b = false := by 
+theorem flt_nan_r (a b : F32) (h : b.isNaN) : F32.flt a b = false := by
   simp [flt]
   split <;> simp_all
 
-theorem feq_nan_l (a b : F32) (h : a.isNaN) : F32.feq a b = false := by 
+theorem feq_nan_l (a b : F32) (h : a.isNaN) : F32.feq a b = false := by
   simp [feq]
   simp_all
 theorem feq_nan_r (a b : F32) (h : b.isNaN) : F32.feq a b = false := by
@@ -2518,11 +2714,11 @@ theorem feq_nan_r (a b : F32) (h : b.isNaN) : F32.feq a b = false := by
 
 /-- x − x = ±0 for any finite non-NaN (IEEE 754 cancellation). -/
 theorem fsub_self_isZero (rm : RoundMode) (a : F32) (h : ¬a.isNaN) (hi : ¬a.isInf) :
-    (F32.fsub rm a a).isZero := by 
+    (F32.fsub rm a a).isZero := by
   simp [fsub]
   simp [faddEx]
   simp [negate]
-  
+
 
 /-- +0 is a right additive identity under IEEE equality (for non-NaN a). -/
 theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
@@ -2856,20 +3052,11 @@ a.sign = false) :
             simp [sqrtExact]
             simp [roundTo]
             simp [encode]
-            split
-            ·
-              native_decide
-            ·
-              rename_i heq s
+            rename_i a_not_inf a_not_zero 
+            simp_all
+          · 
+            
 
-              by_cases heq
-              ·
-                simp_all
-              ·
-                rename_i heq
-                simp at heq
-                rw [heq]
-                native_decide
 
     ·
 

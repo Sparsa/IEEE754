@@ -2523,8 +2523,12 @@ theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
     simp [addExact]
     split
     · {
+      simp [roundTo]
+      simp [encode]
+      simp [feq]
+      constructor
+      ·
 
-    }
 
 -- ── I. FMA: true single rounding (IEEE 754-2019 §5.4.1) ──────────────────────
 

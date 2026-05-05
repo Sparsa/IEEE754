@@ -1200,7 +1200,179 @@ theorem  expb_leq_expa_imp_zero (expb expa : Int) : expb ≤ expa → (expb - ex
 
 theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
     addExact rm a b = addExact rm b a := by
-  sorry
+    induction a with
+    | finite signa expa siga =>
+      induction b with
+      | finite signb expb sigb =>
+        simp [addExact]
+        split
+        ·{
+          rename_i signa_signb_zero
+          have ⟨signa_z, signb_z⟩ := signa_signb_zero
+          simp [signa_z,signb_z]
+          ac_rfl
+        }
+        ·{
+          rename_i siga_sigb_and_nz
+          have sigb_siba_and_nz : ¬ (sigb = 0 ∧ siga = 0) := by
+            rwa [And.comm]
+          simp at siga_sigb_and_nz
+          simp at sigb_siba_and_nz
+          split
+          ·{
+            rename_i siga_z
+            simp_all
+          }
+          ·{
+            simp_all
+            split
+            ·{
+              rfl
+            }
+            ·{
+              split
+              ·{
+                simp_all
+                constructor
+                ·{
+                  split
+                  ·{
+                    simp_all
+                    intro hexpbleqexpa
+                    omega
+                  }
+                  ·{
+                    simp_all
+                    intro
+                    omega
+                  }
+                }
+                ·{
+                  rename_i signa_eq_signb sigb_nz siga_nz
+                  have h1 : (if expa ≤ expb then expa else expb) = (if expb ≤ expa then expb else expa) := by
+                    split
+                    · split
+                      · omega
+                      · omega
+                    · split
+                      · omega
+                      · omega
+                  rw [h1]
+                  ac_rfl
+                }
+              }
+              ·{
+                have h1 : (if expa ≤ expb then expa else expb) = (if expb ≤ expa then expb else expa) := by
+                    split
+                    · split
+                      · omega
+                      · omega
+                    · split
+                      · omega
+                      · omega
+                rename_i siganz sigbnz signa_neq_signb
+                rw [eq_comm] at signa_neq_signb
+                simp [signa_neq_signb]
+                rw [h1]
+                split
+                ·{
+                  simp_all
+                  split
+                  ·{
+                    simp_all
+                    split
+                    ·{
+                      simp_all
+                      rename_i sig1 sig2 sig3
+                      have siga_bit_expa_expb : siga <<< (expa - expb).toNat ≤ sigb := by
+                        omega
+                      simp [siga_bit_expa_expb]
+                    }
+                    ·{
+                      rename_i sig1 sig2 sig3
+                      have siga_bit_expa_expb_neq : ¬(siga <<< (expa - expb).toNat ≤ sigb) := by
+                        omega
+                      simp [siga_bit_expa_expb_neq]
+                      intro
+                      contradiction
+                    }
+                  }
+                  ·{
+                    simp_all
+                    split <;>
+                    ·{
+                      rename_i sig1 sig2 sig3
+                      have siga_bit_expa_expb_sigb : siga <<< (expa -expb).toNat ≤ sigb := by
+                        omega
+                      simp [siga_bit_expa_expb_sigb]
+                      intro hh
+                      contradiction
+                    }
+                  }
+                }
+                ·{
+                  simp_all
+                  split
+                  ·{
+                    simp_all
+                    split
+                    ·{
+                      simp_all
+                      rename_i sig1 sig2 sig3
+                      have siga_leq_sigb_bit_expa_expb : siga ≤ sigb  <<< (expb - expa).toNat  := by
+                        omega
+                      simp [siga_leq_sigb_bit_expa_expb]
+                    }
+                    ·{
+                      rename_i sig1 sig2 sig3
+                      have siga_leq_sigb_bit_expa_expb_neq : ¬(siga ≤ sigb <<< (expb - expa).toNat) := by
+                        omega
+                      simp [siga_leq_sigb_bit_expa_expb_neq]
+                      intro hh
+                      contradiction
+                    }
+                  }
+                  ·{
+                    simp_all
+                    split <;>
+                    ·{
+                      rename_i sig1 sig2 sig3
+                      have siga_leq_siga_expa_expb : siga ≤ sigb <<< (expb -expa).toNat  := by
+                        omega
+                      simp [siga_leq_siga_expa_expb]
+                      intro hh
+                      contradiction
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      | inf s =>
+        simp [addExact]
+      | nan => simp [addExact]
+    | inf s =>
+      induction b with
+      | finite sign exp sig  =>
+        simp [addExact]
+      | inf sign =>
+        simp [addExact]
+        by_cases hss:  s = sign
+        . simp [hss]
+        · simp [hss]
+          rw [eq_comm]
+          exact hss
+      | nan =>
+        simp [addExact]
+    | nan =>
+        induction b with
+        | finite sign exp sig =>
+          simp[addExact]
+        | inf sign =>
+          simp [addExact]
+        | nan =>
+          simp [addExact]
 
 
 /-- encode ∘ decode is the identity on normal F32 values (IEEE 754 bitvector layout).

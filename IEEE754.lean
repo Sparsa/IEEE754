@@ -487,6 +487,8 @@ def feq (a b : F32) : Bool :=
 def flt (a b : F32) : Bool :=
   if a.isNaN || b.isNaN then false
   else if a.isZero && b.isZero then false
+  else if a.isZero then !b.sign
+  else if b.isZero then a.sign
   else
     match a.sign, b.sign with
     | true,  false => true              -- neg < pos (both-zero already excluded)
@@ -1375,22 +1377,6 @@ theorem addExact_comm (rm : RoundMode) (a b : DecodedFloat) :
           simp [addExact]
 
 
-/-- encode ∘ decode is the identity on normal F32 values (IEEE 754 bitvector layout).
-    Proof: decode produces exact (sign, exp, sig) then encode reconstructs them. -/
-theorem encode_decode_normal {f : F32} (h : f.isNormal) :
-    F32.encode (F32.decode f) = f := by
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
-             · {
-               simp_all
-               }
-
-
-
 
 
 /-- mulExact is commutative: a × b = b × a (before rounding). -/
@@ -1524,45 +1510,15 @@ theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
     (hf : f.isFinite = true)
     (hres : ¬((roundTo fmt rm f).1).isZero) :
     ((roundTo fmt rm f).1).dfSign = f.dfSign := by
-    simp [DecodedFloat.dfSign]
-    split
-    ·
-      rename_i x a heq
-      split
-      ·
-        simp [DecodedFloat.isZero] at hres
-        simp [roundTo] at hres
+    induction f with
+    | finite sign exp s =>
+      simp [roundTo]
+      by_cases (s = 0)
+      ·{
         simp_all
-        simp_all
+        simp [F32.dfSign]
 
-
-    simp at hne
-    simp at hres
-    simp [roundTo]
-    split
-    ·
-      simp
-    ·
-      simp
-
-    ·
-      rename_i ds sig
-      by_cases hds: ds
-      ·
-        simp
-        rw [hds]
-        simp [DecodedFloat.dfSign]
-      ·
-        simp [DecodedFloat.dfSign]
-    ·
-      split
-      ·
-        simp [DecodedFloat.dfSign]
-      ·
-        split
-        ·
-          simp
-
+      }
 
 
 
@@ -1578,41 +1534,36 @@ theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
     and the same result. -/
 theorem roundTo_idempotent (fmt : FPFormat) (rm : RoundMode) (d : DecodedFloat) :
     roundTo fmt rm (roundTo fmt rm d).1 = ((roundTo fmt rm d).1, ExcFlags.empty) := by
-    cases fmt
-    · {
+    induction d with
+    | nan  =>
       simp [roundTo]
-      cases d
-      · {
-        rename_i sign exp sig
-        split
-        · {
-          simp_all
-        }
-        · {
-          rename_i d s h
-          rw [h]
-        }
-        · {
-          rename_i d s h
-          rw [h]
-          cases s
-          · {
-            rename_i  d a
-            simp at h
-
-
-          }
-          · {
-            simp_all
-          }
-        }
-
+    | inf sign =>
+      simp [roundTo]
+    | finite sign exp s =>
+      simp [roundTo]
+      split
+      ·{
         simp_all
       }
-      · {
-        simp_all
+      ·{
+        rename_i heq s df
+        simp [df]
       }
-    }
+      ·{
+        rename_i heq s df
+        simp [df]
+        sorry
+      }
+      ·{
+        rename_i heq s df
+        simp [df]
+
+        subst h1; subst h2; subst h3
+        simp [roundTo]
+      }
+
+
+
 
 
 
@@ -1767,6 +1718,8 @@ theorem decode_isZero {f : F32} (h : f.isZero) : (F32.decode f).isZero := by
 
 /-- encode ∘ decode is the identity on normal F32 values (IEEE 754 bitvector layout).
     Proof: decode produces exact (sign, exp, sig) then encode reconstructs them. -/
+
+
 theorem encode_decode_normal {f : F32} (h : f.isNormal) :
     F32.encode (F32.decode f) = f := by
   -- isNormal = (!expIsZero && !expIsMax)
@@ -1797,38 +1750,9 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
     simp [significand]  at right
     rw [h] at right
     simp at right
-    simp [isNormal] at h
-    have ⟨ hl , hr ⟩ := h
-    simp [pack]
 
-    have pack_f : (pack f.sign f.expRaw f.significand.toNat) = f := by
-         simp [pack]
-    cases s
-    ·
-      rw [← pack_f ]
-      simp_all
+    sorry
 
-
-
-
-
-
-
-
-
-
-  -- Goal: encode (.finite f.sign (↑expRaw.toNat - 127 - 23) f.significand.toNat) = f
-  --
-  -- Remaining proof steps (see sorry):
-  --   1. significand.toNat = 2^23 + mantissa.toNat  (isNormal → leading 1 at bit 23)
-  --      → significand.toNat ≠ 0
-  --      → findLeadingBit significand.toNat (log2+1) = 23
-  --   2. biasedExp = (expRaw.toNat - 127 - 23) + 23 + 127 = expRaw.toNat  (omega)
-  --   3. expIsZero = false → expRaw.toNat ≥ 1  (biasedExp > 0)
-  --      expIsMax  = false → expRaw.toNat ≤ 254  (biasedExp < 0xFF)
-  --   4. significand.toNat &&& (2^23 - 1) = mantissa.toNat  (masks off the leading 1)
-  --   5. pack f.sign f.expRaw f.mantissa = f  (bitvector field-reconstruction identity)
-  sorry
 
 
 
@@ -1864,24 +1788,7 @@ theorem encode_decode_subnormal {f : F32} (h : f.isSubnormal) :
   --   3. encode hits the subnormal branch:
   --      subSig = mantissa.toNat &&& (2^23 - 1) = mantissa.toNat
   --   4. pack f.sign 0 f.mantissa = f  (subnormal has expRaw = 0 by expIsZero = true)
-  simp [encode]
-  split
-  ·
-     simp_all
-  ·
-    simp_all
-  ·
-    simp_all
-    rename_i d s exp u
-    have ⟨ ul, um ,ur ⟩ := u
-
-
-    simp [isSubnormal] at h
-    simp [isSubnormal] at h
-  ·
-    split
-    ·
-
+  sorry
 
 /-- Ecoding .nan always produces a NaN bit pattern. -/
 theorem encode_nan_isNaN : (F32.encode DecodedFloat.nan).isNaN := by
@@ -2402,90 +2309,107 @@ theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}
 
     simp [isInf]
     constructor
-    · {
+    ·{
       simp [fdiv, fdivEx,decode, a_notn, a_notinf]
       simp_all
       simp [divExact]
       split
-      · {
+      ·{
         simp [divExactWith]
         split
-        ·
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           bv_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           bv_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           simp_all
           rename_i h a b sa exp1 sig sb sexp x heq1 heq
           by_cases sa <;> by_cases sb <;> simp_all <;> native_decide
-        ·
+        }
+        ·{
           rename_i h da db sa exp1 sb exp sig x heq1 heq
           by_cases sa <;> by_cases sb <;> simp_all
-        ·
+        }
+        ·{
           rename_i h a b sa ea siga sb eb sigb x2 x1 x heq1 heq
           by_cases sa <;> by_cases sb <;> simp_all
         }
-      · {
+      }
+      ·{
         simp [divExactWith]
         split
-        ·
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           simp [roundTo]
           simp [encode]
           native_decide
-        ·
+        }
+        ·{
           rename_i h a b sa sb exp sig heq1 heq
           by_cases sa <;> by_cases sb <;> simp_all
-        ·
+        }
+        ·{
           rename_i h a b sa exp sig sb heq1 heq
           by_cases sa <;> by_cases sb <;> simp_all
-        ·
+        }
+        ·{
           rename_i h a b sa exp1 sig sb exp x heq1 heq
           by_cases sa <;> by_cases sb <;> simp_all  <;>
           simp [roundTo] <;>
           simp [encode] <;>
           native_decide
-        ·
+        }
+        ·{
           rename_i heq1 heq
           rename_i sb exp sig x
           rename_i h da db sa exp
           simp [roundTo]
           simp [encode]
           by_cases sa <;> by_cases sb <;> simp_all
-        ·
+        }
+        ·{
           rename_i   h a b sa ea siga sb eb sigb x2 x1 x  heq1 heq
           split
           ·
@@ -2522,7 +2446,8 @@ theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}
                 simp_all
               ·
                 simp_all
-        }
+
+      }
    }
    ·
    {
@@ -2538,8 +2463,43 @@ theorem fmul_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
     (hza : ¬a.isZero) (hzb : ¬b.isZero)
     (hr  : ¬(F32.fmul rm a b).isNaN) :
-    (F32.fmul rm a b).sign = (a.sign != b.sign) := by sorry
+    (F32.fmul rm a b).sign = (a.sign != b.sign) := by
+    simp [fmul]
+    simp [fmulEx]
+    simp [mulExact]
+    split
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp_all
+      rename_i heq
+      simp [sign]
+    }
+    ·{
+      simp_all
+      simp [roundTo]
+      simp [encode]
 
+    }
+    ·{
+      simp_all
+      simp [roundTo]
+      simp [encode]
+
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp [pack]
+    }
+    ·{
+      simp_all
+    }
 /-- The quotient sign is XOR of operand signs (when result is not NaN). -/
 theorem fdiv_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
@@ -2553,7 +2513,19 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
     (ha : a.sign = s) (hb : b.sign = s)
     (hr  : ¬(F32.fadd rm a b).isNaN)
     (hrz : ¬(F32.fadd rm a b).isZero) :
-    (F32.fadd rm a b).sign = s := by sorry
+    (F32.fadd rm a b).sign = s := by
+    simp [fadd]
+    simp [faddEx]
+    simp [addExact]
+    split
+    ·{
+      have a_non_nan : ¬ a.decode = DecodedFloat.nan := by
+        simp[ decode]
+        simp at hna
+        rw [hna]
+        simp
+
+    }
 
 -- ── F. Commutativity (follows from addExact_comm / mulExact_comm above) ───────
 
@@ -2578,22 +2550,60 @@ theorem fmul_comm (rm : RoundMode) (a b : F32) :
 theorem flt_irrefl (a : F32) : F32.flt a a = false := by
   simp [flt]
   split <;> simp_all
+  split
+  · simp_all
+  · simp_all
+  · intro hh
+    rfl
+  · simp_all
 
 /-- flt is asymmetric. -/
 theorem flt_asymm {a b : F32} (h : F32.flt a b) : F32.flt b a = false := by
   simp [flt] at *
-  split at h <;> split <;> simp_all <;> omega
+  split at h <;> split <;> simp_all <;>
+  split
+  · simp_all
+  · rfl
+  · simp_all
+    exact Nat.le_of_lt h.2
+  · simp_all
+    exact Nat.le_of_lt h.2
 
 /-- flt is transitive. -/
 theorem flt_trans {a b c : F32}
     (h1 : F32.flt a b) (h2 : F32.flt b c) : F32.flt a c := by
-    simp [flt] at *
-    split at h1 <;> split at h2 <;> split <;> simp_all
-    have ⟨h1l, h1r⟩ := h1
-    have ⟨ h2l, h2m,h2r ⟩ := h2
-    · {
+    simp [F32.flt] at *
+    have ⟨h1r,h1m,h1l⟩ := h1
+    have ⟨h2r,h2m,h2l⟩ := h2
+    constructor
+    ·
+      constructor
+      ·
+        exact h1r.1
+      ·
+        exact h2r.2
+    .
+      constructor
+      ·
+        rcases h1m with ha | hb
+        · exact Or.inl ha -- a.isZero = false
+        ·
+          rcases h2m with _ | hc -- b.isZero = false
+            -- case split on a.isZero
+          .  cases ha : a.isZero with
+              | true => simp_all
+              | false => simp_all
+          . cases ha : a.isZero with
+            | true => exact Or.inr hc
+            | false => exact Or.inr hc
 
-    }
+      ·
+        simp_all
+        by_cases a.sign <;> by_cases b.sign <;> by_cases c.sign <;>
+        simp_all
+
+
+
 
 /-- NaN comparisons always return false (IEEE 754 §5.11 "unordered"). -/
 theorem flt_nan_l (a b : F32) (h : a.isNaN) : F32.flt a b = false := by

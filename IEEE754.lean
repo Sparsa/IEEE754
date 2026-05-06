@@ -1510,17 +1510,36 @@ theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
     (hf : f.isFinite = true)
     (hres : ¬((roundTo fmt rm f).1).isZero) :
     ((roundTo fmt rm f).1).dfSign = f.dfSign := by
+    simp [DecodedFloat.dfSign]
     induction f with
     | finite sign exp s =>
-      simp [roundTo]
-      by_cases (s = 0)
-      ·{
-        simp_all
-        simp [F32.dfSign]
-
-      }
+      simp_all
+      simp[DecodedFloat.isZero] at hres
+      simp [hres]
 
 
+theorem roundTo_sign_preserved1 {fmt : FPFormat} {rm : RoundMode}
+    {f : DecodedFloat}
+    (hf : f.isFinite = true)
+    (hres : ¬((roundTo fmt rm f).1).isZero) :
+    ((roundTo fmt rm f).1).dfSign = f.dfSign := by
+  cases f with
+  | finite sign exp s =>
+    simp [DecodedFloat.isFinite] at hf
+    simp [DecodedFloat.dfSign]
+    simp [DecodedFloat.isZero] at hres
+    simp [roundTo]
+    -- now split on the roundTo result
+    cases h : (roundTo fmt rm (DecodedFloat.finite sign exp s)).fst with
+    | finite s' e' n' =>
+      -- need to show s' = sign from roundTo definition
+      sorry
+    | inf s' => simp [DecodedFloat.dfSign, h]
+    | nan => simp [DecodedFloat.dfSign, h]
+  | inf s =>
+    simp [DecodedFloat.isFinite] at hf
+  | nan =>
+    simp [DecodedFloat.isFinite] at hf
 
 
 
@@ -3042,6 +3061,7 @@ a.sign = false) :
             simp [encode]
             rename_i a_not_inf a_not_zero
             simp_all
+
           ·
 
 

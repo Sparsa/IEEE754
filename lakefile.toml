@@ -1,0 +1,6 @@
+name = "mod_prove"
+[[require]]
+name = "Paperproof"
+git = "https://github.com/Paper-Proof/paperproof.git"
+subDir = "lean"
+rev = "main"

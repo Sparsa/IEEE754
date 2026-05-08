@@ -912,6 +912,20 @@ private theorem isInf_false_of_isNormal (f : F32) (h : f.isNormal = true) :
   intros h1
   simp_all
 
+private theorem isInf_false_of_isSubnormal (f:F32) (h : f.isSubnormal = true) :
+  f.isInf = false := by
+  simp [isInf,mantIsZero,isSubnormal] at *
+  have ⟨hl,hr⟩ := h
+  intros haa
+  exact hr
+
+private theorem isNormal_false_of_isSubnormal (f:F32) (h: f.isSubnormal = true) :
+  f.isNormal = false := by
+  simp [isNormal, isSubnormal] at *
+  intros hh
+  have ⟨hl,hr⟩ := h
+  simp_all
+
 private theorem isNaN_false_of_isInf (f:F32) (h:f.isInf = true) :
   f.isNaN = false := by
   simp [isNaN,isInf] at *
@@ -935,6 +949,15 @@ private theorem isNaN_false_of_isSubnormal (f:F32) (h:f.isSubnormal = true) :
   simp [expIsMax] at h2
   rw [expz] at h2
   contradiction
+
+private theorem isNaN_false_of_isNormal (f:F32) (h: f.isNormal = true):
+  f.isNaN = false := by
+  simp [isNaN]
+  simp [isNormal] at h
+  have ⟨hl,hr⟩ := h
+  intro hh
+  simp_all
+
 
 
 theorem biject_class_zero (f : F32) :
@@ -1074,7 +1097,7 @@ constructor
                   rw [hInf] at h
                   simp at h
 
-theorem biject_class_subn (f:F32) :
+theorem biject_class_subnormal (f:F32) :
   f.isSubnormal ↔ (classify f) = .subnormal :=
 by
  constructor
@@ -2325,65 +2348,46 @@ theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}
                                        simp [isInf]
                                        intros
                                        simp_all
-
     simp [isInf]
     constructor
     ·{
-      simp [fdiv, fdivEx,decode, a_notn, a_notinf]
-      simp_all
-      simp [divExact]
-      split
-      ·{
-        simp [divExactWith]
-        split
-        ·{
-          simp [roundTo]
-          simp [encode]
-          native_decide
-        }
-        ·{
-          simp [roundTo]
-          simp [encode]
-          native_decide
-        }
-        ·{
-          simp [roundTo]
-          simp [encode]
-          native_decide
-        }
-        ·{
-          simp [roundTo]
-          simp [encode]
-          native_decide
-        }
-        ·{
-          simp [roundTo]
-          simp [encode]
-          bv_decide
-        }
-        ·{
-          simp [roundTo]
-          simp [encode]
-          bv_decide
-        }
-        ·{
-          simp [roundTo]
-          simp [encode]
+      cases claa: (classify a)
+      ·{ -- when a is zero
+        have bja := biject_class_zero a
+        simp_all
+      }
+      ·{ -- when a is subnormal
+        have bja := biject_class_subnormal a
+        have a_subn :=  bja.mpr claa
+        have a_not_nan : a.isNaN = false := by
+          exact isNaN_false_of_isSubnormal a a_subn
+        have a_not_zero : a.isZero = false := by
+          exact isZero_false_of_isSubnormal a a_subn
+        have a_not_inf : a.isInf = false := by
+          exact isInf_false_of_isSubnormal a a_subn
+        have a_not_normal : a.isNormal = false := by
+          exact isNormal_false_of_isSubnormal a a_subn
+        have b_not_nan :  b.isNaN = false := by
+          exact isNaN_false_of_isZero b hb
+        have b_not_inf :  b.isInf = false := by
+          exact isInf_false_of_isZero b hb
+        have b_z : b.decode = .finite b.sign 0 0 := by
+          simp [decode]
+          simp [b_not_nan, b_not_inf]
+          intro b_is_not_z
           simp_all
-          rename_i h a b sa exp1 sig sb sexp x heq1 heq
-          by_cases sa <;> by_cases sb <;> simp_all <;> native_decide
-        }
-        ·{
-          rename_i h da db sa exp1 sb exp sig x heq1 heq
-          by_cases sa <;> by_cases sb <;> simp_all
-        }
-        ·{
-          rename_i h a b sa ea siga sb eb sigb x2 x1 x heq1 heq
-          by_cases sa <;> by_cases sb <;> simp_all
-        }
-      }
-      ·{
+        have a_sub : a.decode = .finite a.sign (0-149) a.significand.toNat :=  by
+          simp[decode]
+          simp [a_not_nan]
+          simp [a_not_zero]
+          simp [a_not_inf]
+          simp [a_not_normal]
+        simp [fdiv]
+        simp [fdivEx]
+        simp [divExact]
         simp [divExactWith]
+        simp [b_z]
+        simp [a_sub]
         split
         ·{
           simp [roundTo]
@@ -2406,72 +2410,88 @@ theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}
           native_decide
         }
         ·{
-          rename_i h a b sa sb exp sig heq1 heq
-          by_cases sa <;> by_cases sb <;> simp_all
-        }
-        ·{
-          rename_i h a b sa exp sig sb heq1 heq
-          by_cases sa <;> by_cases sb <;> simp_all
-        }
-        ·{
-          rename_i h a b sa exp1 sig sb exp x heq1 heq
-          by_cases sa <;> by_cases sb <;> simp_all  <;>
-          simp [roundTo] <;>
-          simp [encode] <;>
-          native_decide
-        }
-        ·{
-          rename_i heq1 heq
-          rename_i sb exp sig x
-          rename_i h da db sa exp
           simp [roundTo]
           simp [encode]
-          by_cases sa <;> by_cases sb <;> simp_all
+          simp [pack]
+          simp [expIsMax]
+          simp [expRaw]
+          split <;>
+          ·{
+            native_decide
+          }
         }
         ·{
-          rename_i   h a b sa ea siga sb eb sigb x2 x1 x  heq1 heq
-          split
-          ·
-            simp [roundTo]
-            split
-            ·
-              simp [encode]; native_decide
-            ·
-              simp [encode]
-              rename_i  s heq
-              by_cases hs: s
-              ·
-                simp [hs]
-                native_decide
-              ·
-                simp [hs]
-                native_decide
-            ·
-              simp [encode]
-              rename_i s exp heq
-              by_cases hs : s
-              ·
-                simp [hs]
-                simp_all
-              ·
-                simp [hs]
-                simp_all
-            ·
-              rename_i  heq1  heq2  h d  s  e sig  x heq
-              simp at heq
-              have ⟨heql,heqm,helql⟩ := heq
-              split
-              ·
-                simp_all
-              ·
-                simp_all
+          contradiction
+        }
+        ·{
+          simp_all
+          simp [roundTo]
+          simp [encode]
+          simp[expIsMax]
+          rename_i heq1 heq2
+          have ⟨ heq1l,heq1m,heq1r⟩ := heq1
+          have ⟨heq2l,he12r ⟩ := heq2
+          simp [expRaw]
+          simp [pack]
+          rw [eq_comm] at heq2l
+          rw [heq2l]
+          rw [eq_comm] at heq1l
+          rw [heq1l]
+          by_cases (a.sign = b.sign)
+          ·{
+            rename_i asign_bsign
+            simp [asign_bsign]
+          }
+          ·{
+            rename_i asign_bsign
+            simp [asign_bsign]
+          }
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          rename_i heq1 heq2
+          rename_i dfa dfb sa exp sb expb sig dd
+          simp [expIsMax]
+          simp [expRaw]
+          by_cases (sb != sa) <;>
+          ·{
+            simp_all
+          }
+        }
+        ·{
+          simp_all
+        }
+      }
+      ·{ -- when a is normal
+        have bja := biject_class_normal a
+        have a_n :=  bja.mpr claa
+        have a_not_nan : a.isNaN = false := by
+          exact isNaN_false_of_isNormal a a_n
+        have a_not_zero : a.isZero = false := by
+          exact isZero_false_of_isNormal a a_n
+        have a_not_inf : a.isInf = false := by
+          exact isInf_false_of_isNormal a a_n
+        have a_not_subnormal : a.isSubnormal = false := by
+          exact isSubnormal_false_of_isNormal a a_n
+        have b_not_nan :  b.isNaN = false := by
+          exact isNaN_false_of_isZero b hb
+        have b_not_inf :  b.isInf = false := by
+          exact isInf_false_of_isZero b hb
+        have b_z : b.decode = .finite b.sign 0 0 := by
+          simp [decode]
+          simp [b_not_nan, b_not_inf]
+          intro b_is_not_z
+          simp_all
+        have a_normal : a.decode = .finite
+        simp [fdiv]
+        simp [fdivEx]
+        simp [divExact]
+        simp [divExactWith]
+        simp [b_z]
 
       }
-   }
-   ·
-   {
-
-   }
+     }
 
 
 

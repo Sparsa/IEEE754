@@ -7,23 +7,23 @@
 
     BitVec Input(s) → Decode → DecodedFloat → Op → PreciseResult → Round → RoundedFloat → Encode → BitVec Output
 
-  The Decode/Encode steps are format-specific (§6 F32, §8 F64).
-  Everything else — exact arithmetic (§4) and rounding (§5) — is shared across all formats.
+  The Decode/Encode steps are format-specific (6. F32, 8. F64)§.
+  Everything else — exact arithmetic (4) and rounding 5) — is shared across all formats.
 
   Structure
   ─────────
-  §1   Rounding modes
-  §2   DecodedFloat — common "Rational Operand" representation
-  §3   FPFormat — format descriptor (parameterises rounding & encoding)
-  §4   Common exact arithmetic (addExact, mulExact, divExact, fmaExact, sqrtExact)
-  §5   Common rounding (roundTo)
-  §6   F32 — format-specific bitvector layer (decode, encode, fields, constants, comparison)
-  §7   F32 — top-level composed operations (fadd, fmul, fdiv, fma, fsub)
-  §8   F64 — format-specific bitvector layer
-  §9   F64 — top-level composed operations
-  §10  Conversions (F32 ↔ F64, F32 ↔ Int)
-  §11  Verification properties
-  §12  Hardware Oracle Interface (cocotb / CVDP integration)
+  1   Rounding modes
+  2   DecodedFloat — common "Rational Operand" representation
+  3   FPFormat — format descriptor (parameterises rounding & encoding)
+  4   Common exact arithmetic (addExact, mulExact, divExact, fmaExact, sqrtExact)
+  5   Common rounding (roundTo)
+  6   F32 — format-specific bitvector layer (decode, encode, fields, constants, comparison)
+  7   F32 — top-level composed operations (fadd, fmul, fdiv, fma, fsub)
+  8   F64 — format-specific bitvector layer
+  9   F64 — top-level composed operations
+  10  Conversions (F32 ↔ F64, F32 ↔ Int)
+  11  Verification properties
+  12  Hardware Oracle Interface (cocotb / CVDP integration)
 
   Representation
   ──────────────

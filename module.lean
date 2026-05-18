@@ -10,7 +10,7 @@ def mod_orig (a : Nat) :=
 def mod_fast (input:Nat) :=
   let MOD := (input >>> BIT) + (input &&& MODULO)
   if MOD ≥ MODULO then MOD - MODULO else MOD
-  
+
 #eval 0xffffffff = 2^32-1
 example (a : Nat) : a >>> 32 = a / 2^32 := by exact?
 example (a b : Nat) : b * a /b = a := by apply?
@@ -49,7 +49,7 @@ theorem check_equality (a : Nat) (h : a <  2^33) :
     simp [show (2:Nat)^32 = 4294967296 from by native_decide] at this
     exact this
   have hmod : a &&& 4294967295 = a % 4294967296 := by
-    have := Nat.and_two_pow_sub_one_eq_mod a 32
+    have := Nat.and_two_pow_sub_one_eq_mod a 33
     simp [show (2:Nat)^32 - 1 = 4294967295 from by native_decide] at this
     exact this
   have hi_bound : a / 4294967296 ≤ 4294967294 := by

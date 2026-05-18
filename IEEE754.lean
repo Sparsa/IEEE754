@@ -902,7 +902,11 @@ private theorem isInf_false_of_isZero (f : F32) (h : f.isZero = true) :
   rename_i right left
   rw [right] at h
   contradiction
-
+private theorem isInf_false_of_isFinite (f:F32) (h:f.isFinite = true) : f.isInf = false := by
+  simp [isInf, isFinite, expIsMax] at *
+  intro h1
+  rw [h1] at h
+  contradiction
 
 
 private theorem isInf_false_of_isNormal (f : F32) (h : f.isNormal = true) :
@@ -958,6 +962,11 @@ private theorem isNaN_false_of_isNormal (f:F32) (h: f.isNormal = true):
   intro hh
   simp_all
 
+private theorem isNaN_false_of_isFinite (f:F32) (h: f.isFinite = true) :
+  f.isNaN = false := by
+  simp [isNaN, isFinite] at *
+  intro h1
+  simp_all
 
 
 theorem biject_class_zero (f : F32) :
@@ -1534,6 +1543,7 @@ theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
     (hres : ¬((roundTo fmt rm f).1).isZero) :
     ((roundTo fmt rm f).1).dfSign = f.dfSign := by
     simp [DecodedFloat.dfSign]
+
     induction f with
     | finite sign exp s =>
       simp_all
@@ -1795,12 +1805,46 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
 
     sorry
 
+example :(2^n).log2 = n := by exact?
+theorem BitVec.toNat_log2_le (a : BitVec n) : a.toNat.log2 ≤ n := by
+  have hlt := a.isLt  -- a.toNat < 2^n
+  rcases Nat.eq_zero_or_pos a.toNat with h | h
+  · simp [h]          -- log2 0 = 0 ≤ n
+  · have : a.toNat.log2 < n + 1 := by
+      have h2 : a.toNat ≠ 0 := by omega
+      rw [Nat.log2_lt h2]  -- log2 x < k+1 ↔ x < 2^(k+1)
+      omega
+    omega
 
+theorem two_pow (a  : Nat) : a = 2^n → a.log2 = n := by
+  intro h
+  rw [h]
+  rw[Nat.log2_two_pow]
 
+-- Bound by second argument
+theorem findLeadingBit_go_le (v p : Nat) : findLeadingBit.go v p ≤ p := by
+  induction p with
+  | zero => unfold findLeadingBit.go; simp
+  | succ q ih =>
+    unfold findLeadingBit.go
+    split
+    · omega
+    · omega  -- ih : go v q ≤ q, goal : go v q ≤ q+1
 
+-- Top bit not set, so result ≤ log2 v
+theorem findLeadingBit_le (v : Nat) :
+    findLeadingBit v (v.log2 + 1) ≤ v.log2 := by
+  unfold findLeadingBit findLeadingBit.go
+  -- At p = log2 v + 1: testBit (log2 v + 1) = false since v < 2^(log2 v+1)
+  have hbit : v.testBit (v.log2 + 1) = false := by
+    have h2 : 2^(v.log2 + 1) = 2 * 2^(v.log2) := by
+      rw [Nat.mul_comm]
+      rw [Nat.pow_succ]
+    simp [Nat.testBit]
 
-
-
+    exact Nat.lt_of_lt_pred (Nat.log2_self_le _)
+  simp [hbit]
+  exact findLeadingBit_go_le v v.log2
 
 
 /-- encode ∘ decode is the identity on subnormal F32 values. -/
@@ -1821,16 +1865,87 @@ theorem encode_decode_subnormal {f : F32} (h : f.isSubnormal) :
   have hNotNormal : f.isNormal   = false := by simp [isNormal,   hExpZero]
   -- Reduce decode to the subnormal case: rawExp = 1 (no leading 1)
   simp only [decode, hNotNaN, hNotInf, hNotZero, hNotNormal]
-  -- Goal: encode (.finite f.sign (1 - 127 - 23) f.significand.toNat) = f
-  --
-  -- Remaining proof steps (see sorry):
-  --   1. significand.toNat = mantissa.toNat  (isNormal = false → no leading 1)
-  --   2. findLeadingBit mantissa.toNat _ ≤ 22  (mantissa : BitVec 23, bits 0..22)
-  --      → biasedExp = (1 - 127 - 23) + leadPos + 127 = leadPos - 22 ≤ 0
-  --   3. encode hits the subnormal branch:
-  --      subSig = mantissa.toNat &&& (2^23 - 1) = mantissa.toNat
-  --   4. pack f.sign 0 f.mantissa = f  (subnormal has expRaw = 0 by expIsZero = true)
-  sorry
+  simp [encode]
+  split
+  ·{
+   simp_all
+  }
+  ·{
+    simp_all
+  }
+  ·{
+    simp_all
+    simp [expIsZero] at hExpZero
+    rename_i d s exp form
+    obtain ⟨sign,exp,sig⟩ := form
+    simp [mantIsZero] at hMantNZ
+    simp [significand] at sig
+    simp [hNotNormal] at sig
+    exfalso
+    apply hMantNZ
+    apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.toNat_ofNat, Nat.zero_mod]
+    have hlt : f.mantissa.toNat < 16777216 := by
+      have := f.mantissa.isLt
+      omega
+    omega
+  }
+  ·{
+    rename_i d s e sig  x heq
+    have hij := DecodedFloat.finite s e sig
+    obtain ⟨sign,exp,sg⟩ := hij
+    simp at heq
+    obtain ⟨left,mid,right⟩ := heq
+    rw [← right]
+    rw [← mid]
+    have hlt : f.significand.toNat < 8388608 := by
+       simp only [F32.significand]
+       rw [hNotNormal]
+       simp
+       have := f.mantissa.isLt
+       omega
+    have hlog : f.significand.toNat.log2 ≤ 24 := by
+      apply BitVec.toNat_log2_le
+    simp [findLeadingBit,findLeadingBit.go]
+    split
+    ·{
+      simp_all
+      split
+      ·{
+
+      }
+    }
+
+
+
+
+  }
+
+    apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.toNat_ofNat, Nat.zero_mod]
+    have hlt : f.mantissa.toNat < 16777216 := by
+      have := f.mantissa.isLt
+      norm_num at this ⊢
+      omega
+    omega
+
+    have dfZero (expz : f.expRaw = 0) (sigz : f.significand = 0) (sign : f.sign = s): f = pack s 0#8 0#23 := by
+      simp [pack]
+      simp [expRaw] at expz
+      simp [significand] at sigz
+      have ⟨fN , fsigz⟩ := sigz
+      simp [mantissa] at fsigz
+      simp [setWidth] at fsigz
+
+
+      cases s with
+      | true => simp
+  }
+  ·{
+
+  }
+#example ( a: BitVec n): a.toNat.log2 ≤ n := by apply?
+#print findLeadingBit.go
 
 /-- Ecoding .nan always produces a NaN bit pattern. -/
 theorem encode_nan_isNaN : (F32.encode DecodedFloat.nan).isNaN := by
@@ -2319,15 +2434,126 @@ theorem fdiv_inf_inf {rm : RoundMode} {a b : F32}
 
 /-- ∞ × 0 in fma is invalid regardless of the addend c (§7.2 case d). -/
 theorem fma_inf_zero {rm : RoundMode} {a b c : F32}
-    (ha : a.isInf) (hb : b.isZero) : (F32.fma rm a b c).isNaN := by sorry
+    (ha : a.isInf) (hb : b.isZero) : (F32.fma rm a b c).isNaN := by
+    have a_notn : a.isNaN = false := isNaN_false_of_isInf a ha
+    have b_notn : b.isNaN = false := isNaN_false_of_isZero b hb
+    have b_notinf : b.isInf = false := isInf_false_of_isZero b hb
+    simp [isNaN]
+    constructor <;>
+    {
+    simp [fma, fmaEx, fmaExact, decode]
+    simp [a_notn , ha]
+    simp [b_notn, b_notinf, hb]
+    simp [roundTo, encode]
+    native_decide
+    }
 
 -- ── D. Inf propagation (IEEE 754-2019 §6.1) ──────────────────────────────────
 
 /-- ∞ + finite = ∞ (sign of Inf operand is preserved). -/
 theorem fadd_inf_finite {rm : RoundMode} {a b : F32}
     (ha : a.isInf) (hb : b.isFinite) :
-    (F32.fadd rm a b).isInf ∧ (F32.fadd rm a b).sign = a.sign := by sorry
+    (F32.fadd rm a b).isInf ∧ (F32.fadd rm a b).sign = a.sign := by
+    have a_notn : a.isNaN = false := isNaN_false_of_isInf a ha
+    have b_notn : b.isNaN = false := isNaN_false_of_isFinite b hb
+    have b_notinf : b.isInf = false := isInf_false_of_isFinite b hb
+    simp [isInf]
+    constructor
+    ·{
+      simp [fadd, faddEx,decode]
+      simp [a_notn , ha]
+      simp [b_notn]
+      simp [addExact]
+      split
+      ·
+        simp_all
+      ·
+        simp [roundTo]
+        simp [encode]
+        constructor
+        ·
+          native_decide
+        ·
+          simp [mantIsZero]
+          rename_i da db heq df
+          simp at df
+          simp_all
+          by_cases b.isZero <;>
+          ·{
+            simp_all
+          }
+      ·{
+        rename_i aa bb sa sb heq1 heq2
+        constructor
+        ·{
+          simp [b_notinf] at heq2
+          by_cases (sa = sb) <;>
+          ·{
+            simp_all
+            simp [roundTo]
+            simp [encode]
+            simp[expIsMax]
+            simp [expRaw]
+            grind
+          }
+        }
+        ·{
+          simp [b_notinf] at heq2
+          by_cases (sa = sb) <;>
+          ·{
+            simp_all
+            simp [roundTo]
+            simp [encode]
+            simp[mantIsZero]
+            simp [mantissa]
+            grind
+          }
+        }
+      }
+      ·{
+        rename_i aa bb sa sb heq1 heq2
+        constructor
+        ·{
+          simp [roundTo]
+          simp [encode]
+          simp [expIsMax]
+          simp [expRaw]
+          simp [BitVec.setWidth]
+          cases sa <;> simp [F32.pack]
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          simp[mantIsZero]
+          simp [mantissa]
+          cases sa <;> simp [F32.pack]
+        }
+      }
+      ·{
+        rename_i aa bb sa sb heq1 heq2
+        simp at heq2
+      }
+      ·{
+        rename_i aa bb sa sb heq1 heq2
+        simp at heq1
+      }
+    }
+    ·{
+      simp [fadd, faddEx,decode]
+      simp [a_notn , ha]
+      simp [b_notn,b_notinf]
+      by_cases hh: b.isZero <;>
+       ·
+        simp [hh]
+        simp [addExact]
+        simp [roundTo]
+        simp [encode]
+        simp [sign]
+        simp [pack]
+        bv_decide
+     }
 
+#print pack
 /-- ∞ × nonzero finite = ∞ (sign = XOR of operand signs). -/
 theorem fmul_inf_nonzero {rm : RoundMode} {a b : F32}
     (ha : a.isInf) (hb : b.isFinite) (hnz : ¬b.isZero) :

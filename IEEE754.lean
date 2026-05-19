@@ -1537,48 +1537,49 @@ theorem roundTo_zero (fmt : FPFormat) (rm : RoundMode) (s : Bool) (e : Int) :
     simp [DecodedFloat.isZero]
 
 /-- Rounding a nonzero finite value preserves sign (unless the result underflows to zero). -/
-theorem roundTo_sign_preserved {fmt : FPFormat} {rm : RoundMode}
-    {f: DecodedFloat} (hne : sig ≠ 0)
-    (hf : f.isFinite = true)
-    (hres : ¬((roundTo fmt rm f).1).isZero) :
-    ((roundTo fmt rm f).1).dfSign = f.dfSign := by
-    simp [DecodedFloat.dfSign]
+private theorem ite_fst {α β : Type} (p : Prop) [Decidable p] (a b : α × β) :
+    (if p then a else b).1 = if p then a.1 else b.1 := by
+  by_cases hp : p <;> simp [hp]
 
-    induction f with
-    | finite sign exp s =>
-      simp_all
-      simp[DecodedFloat.isZero] at hres
-      simp [hres]
+private theorem roundTo_false_dfSign (fmt : FPFormat) (rm : RoundMode)
+    (d : DecodedFloat) (hs : d.dfSign = false) :
+    (roundTo fmt rm d).1.dfSign = false := by
+  match d with
+  | .nan             => simp [roundTo, DecodedFloat.dfSign]
+  | .inf false       => simp [roundTo, DecodedFloat.dfSign]
+  | .inf true        => simp [DecodedFloat.dfSign] at hs
+  | .finite false _ 0        => simp [roundTo, DecodedFloat.dfSign]
+  | .finite false e (_ + 1) =>
+    -- Use ite_fst so simp can distribute .1 over every if-then-else branch,
+    -- then dfSign evaluates to false in all cases (sign field is always false).
+    simp only [roundTo, ite_fst, DecodedFloat.dfSign]
+    grind
+  | .finite true _ _ => simp [DecodedFloat.dfSign] at hs
 
-
-theorem roundTo_sign_preserved1 {fmt : FPFormat} {rm : RoundMode}
-    {f : DecodedFloat}
-    (hf : f.isFinite = true)
-    (hres : ¬((roundTo fmt rm f).1).isZero) :
-    ((roundTo fmt rm f).1).dfSign = f.dfSign := by
-  cases f with
-  | finite sign exp s =>
-    simp [DecodedFloat.isFinite] at hf
-    simp [DecodedFloat.dfSign]
-    simp [DecodedFloat.isZero] at hres
-    simp [roundTo]
-    -- now split on the roundTo result
-    cases h : (roundTo fmt rm (DecodedFloat.finite sign exp s)).fst with
-    | finite s' e' n' =>
-      -- need to show s' = sign from roundTo definition
-      sorry
-    | inf s' => simp [DecodedFloat.dfSign, h]
-    | nan => simp [DecodedFloat.dfSign, h]
-  | inf s =>
-    simp [DecodedFloat.isFinite] at hf
-  | nan =>
-    simp [DecodedFloat.isFinite] at hf
+private theorem roundTo_true_dfSign (fmt : FPFormat) (rm : RoundMode)
+    (d : DecodedFloat) (hs : d.dfSign = true) :
+    (roundTo fmt rm d).1.dfSign = true := by
+  match d with
+  | .nan                    => simp [DecodedFloat.dfSign] at hs
+  | .inf false              => simp [DecodedFloat.dfSign] at hs
+  | .inf true               => simp [roundTo, DecodedFloat.dfSign]
+  | .finite false _ 0       => simp [DecodedFloat.dfSign] at hs
+  | .finite false _ (_ + 1) => simp [DecodedFloat.dfSign] at hs
+  | .finite true _ _        =>
+    simp only [roundTo, ite_fst, DecodedFloat.dfSign]
+    grind
 
 
-
-
-
-
+theorem roundTo_sign_preserved (fmt : FPFormat) (rm : RoundMode)
+    (d: DecodedFloat) :
+    (roundTo fmt rm d).1.dfSign = d.dfSign := by
+    cases dh: d.dfSign
+    ·{
+      apply roundTo_false_dfSign fmt rm d dh
+    }
+    ·{
+      apply roundTo_true_dfSign fmt rm d dh
+    }
 
 
 
@@ -1586,33 +1587,13 @@ theorem roundTo_sign_preserved1 {fmt : FPFormat} {rm : RoundMode}
     and the same result. -/
 theorem roundTo_idempotent (fmt : FPFormat) (rm : RoundMode) (d : DecodedFloat) :
     roundTo fmt rm (roundTo fmt rm d).1 = ((roundTo fmt rm d).1, ExcFlags.empty) := by
-    induction d with
-    | nan  =>
-      simp [roundTo]
-    | inf sign =>
-      simp [roundTo]
-    | finite sign exp s =>
-      simp [roundTo]
-      split
-      ·{
-        simp_all
-      }
-      ·{
-        rename_i heq s df
-        simp [df]
-      }
-      ·{
-        rename_i heq s df
-        simp [df]
-        sorry
-      }
-      ·{
-        rename_i heq s df
-        simp [df]
+    cases df : d
+    ·{
+      rw [← df]
 
-        subst h1; subst h2; subst h3
-        simp [roundTo]
-      }
+
+
+    }
 
 
 
@@ -1772,6 +1753,47 @@ theorem decode_isZero {f : F32} (h : f.isZero) : (F32.decode f).isZero := by
     Proof: decode produces exact (sign, exp, sig) then encode reconstructs them. -/
 
 
+/-- Reconstructing a 32-bit float from its (sign, expRaw, mantissa) fields gives back
+    the original value: the three fields are disjoint and cover all 32 bits. -/
+private theorem pack_sign_expRaw_mantissa (f : F32) :
+    F32.pack f.sign f.expRaw f.mantissa = f := by
+    simp [pack]
+    cases hf: f.sign
+    ·{
+      simp
+      have : f = F32.pack f.sign f.expRaw f.mantissa := (F32. pack_sign_expRaw_mantissa f).symm
+        rw [hf] at this
+        simp only [F32.pack] at this ⊢
+        rw [← this]
+
+    }
+
+/-- findLeadingBit of any n in [2^k, 2^(k+1)) equals k. -/
+private theorem findLeadingBit_range (n k : Nat) (hge : 2^k ≤ n) (hlt : n < 2^(k+1)) :
+    findLeadingBit n (n.log2 + 1) = k := by
+  have hlog : n.log2 = k := (Nat.log2_eq_iff (by omega)).mpr ⟨hge, hlt⟩
+  rw [hlog]
+  simp only [findLeadingBit]
+  have hhi : n.testBit (k + 1) = false := Nat.testBit_lt_two_pow hlt
+  have hlo : n.testBit k = true  :=
+    Nat.testBit_of_two_pow_le_and_two_pow_add_one_gt hge hlt
+  simp only [findLeadingBit.go]
+  simp [hhi]
+
+
+/-- Nat → UInt8 → BitVec 8: toNat recovers n when n < 256. -/
+private theorem nat_toUInt8_toBitVec_toNat {n : Nat} (h : n < 256) :
+    n.toUInt8.toBitVec.toNat = n := by
+  have : n.toUInt8.toBitVec = BitVec.ofNat 8 n := rfl
+  rw [this, BitVec.toNat_ofNat, Nat.mod_eq_of_lt h]
+
+/-- Nat → UInt32 → BitVec 32 → truncate 23: toNat recovers n when n < 2^23. -/
+private theorem nat_toUInt32_trunc23_toNat {n : Nat} (h : n < 2^23) :
+    (n.toUInt32.toBitVec.truncate 23).toNat = n := by
+  have step1 : n.toUInt32.toBitVec = BitVec.ofNat 32 n := rfl
+  simp only [step1, BitVec.truncate_eq_setWidth, BitVec.toNat_setWidth,
+             BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show n < 2^32 by omega),
+             Nat.mod_eq_of_lt h]
 theorem encode_decode_normal {f : F32} (h : f.isNormal) :
     F32.encode (F32.decode f) = f := by
   -- isNormal = (!expIsZero && !expIsMax)
@@ -1781,29 +1803,37 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
   have hNotNaN  : f.isNaN  = false := by simp [isNaN,  hExpMax]
   have hNotInf  : f.isInf  = false := by simp [isInf,  hExpMax]
   have hNotZero : f.isZero = false := by simp [isZero, hExpZero]
+  have hNotsub : f.isSubnormal = false := by exact isSubnormal_false_of_isNormal f h
   -- Reduce decode to the normal case: rawExp = expRaw.toNat
-  simp only [decode, hNotNaN, hNotInf, hNotZero, h, ite_true]
-  unfold encode
-  simp
-  split
-  ·
+  cases hf : classify f
+  ·{
+    simp [classify] at hf
+    simp [hNotInf] at hf
+    simp [h] at hf
+    simp [hNotsub] at hf
     simp_all
-  ·
+  }
+  ·{
+    simp [classify] at hf
+    simp [hNotZero] at hf
+    simp [h] at hf
     simp_all
-  ·
-    rename_i d s exp heq
-    simp [isZero] at hNotZero
-    simp [isNaN] at hNotNaN
-    simp [isInf] at hNotInf
-    simp_all
-    have ⟨left,mid,right⟩ := heq
-    simp [expRaw] at mid
-    simp_all
-    simp [significand]  at right
-    rw [h] at right
-    simp at right
+  }
+  ·{
 
-    sorry
+  }
+  ·{
+    simp [classify] at hf
+    simp [hNotZero] at hf
+    simp [h] at hf
+    simp [hNotsub] at hf
+  }
+  ·{
+    simp [classify] at hf
+    simp [hNotZero] at hf
+    simp [hNotsub] at hf
+    simp [h] at hf
+  }
 
 example :(2^n).log2 = n := by exact?
 theorem BitVec.toNat_log2_le (a : BitVec n) : a.toNat.log2 ≤ n := by
@@ -2956,14 +2986,54 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
     simp [fadd]
     simp [faddEx]
     simp [addExact]
+    have a_non_nan : ¬ a.decode = DecodedFloat.nan := by
+      simp[ decode]
+      simp at hna
+      rw [hna]
+      simp
+      grind
+    have b_non_nan : ¬ b.decode = DecodedFloat.nan := by
+      simp[ decode]
+      simp at hnb
+      rw [hnb]
+      simp
+      grind
     split
     ·{
-      have a_non_nan : ¬ a.decode = DecodedFloat.nan := by
-        simp[ decode]
-        simp at hna
-        rw [hna]
-        simp
+      simp [roundTo]
+      simp [encode]
+      grind
+    }
+    ·{
+      contradiction
+    }
+    ·{
+      rename_i aa bb sa sb heq1 heq2
+      split
+      ·{
+        simp [roundTo]
+        simp [encode]
+        simp [sign]
+        have seq : a.sign = sa := by
+          simp [decode,hna] at heq1
+          cases hai : a.isInf
+          ·{
+            simp [hai] at heq1
+            cases haz : a.isZero
+            ·{
+              simp [haz] at heq1
 
+            }
+            ·{
+              simp [haz] at heq1
+            }
+          }
+          ·{
+            simp [hai] at heq1
+            exact heq1
+          }
+
+      }
     }
 
 -- ── F. Commutativity (follows from addExact_comm / mulExact_comm above) ───────
@@ -3014,35 +3084,7 @@ theorem flt_trans {a b c : F32}
     simp [F32.flt] at *
     have ⟨h1r,h1m,h1l⟩ := h1
     have ⟨h2r,h2m,h2l⟩ := h2
-    constructor
-    ·
-      constructor
-      ·
-        exact h1r.1
-      ·
-        exact h2r.2
-    .
-      constructor
-      ·
-        rcases h1m with ha | hb
-        · exact Or.inl ha -- a.isZero = false
-        ·
-          rcases h2m with _ | hc -- b.isZero = false
-            -- case split on a.isZero
-          .  cases ha : a.isZero with
-              | true => simp_all
-              | false => simp_all
-          . cases ha : a.isZero with
-            | true => exact Or.inr hc
-            | false => exact Or.inr hc
 
-      ·
-
-
-
-
-
-        }
 
 
 
@@ -3143,7 +3185,12 @@ theorem fsub_self_isZero (rm : RoundMode) (a : F32) (h : ¬a.isNaN) (hi : ¬a.is
 /-- +0 is a right additive identity under IEEE equality (for non-NaN a). -/
 theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
     F32.feq (F32.fadd rm a F32.posZero) a := by
-    exfalso
+    cases ha: classify a
+    ·{
+      simp [fadd,faddEx,decode]
+      have ha_notn : a.isNaN = false :=
+    }
+
 
 
 
@@ -3368,44 +3415,22 @@ private theorem pack_sign_false (e : BitVec 8) (m : BitVec 23) :
 private theorem pack_sign_true (e : BitVec 8) (m : BitVec 23) :
     (F32.pack true e m).sign = true := by
   simp [pack, sign]
+private theorem pack_sign (s : Bool) (e: BitVec 8) (m: BitVec 23) :
+  (F32.pack s e m).sign = s := by
+  cases s
+  ·{
+    exact pack_sign_false e m
+  }
+  ·{
+    exact pack_sign_true e m
+  }
 -- fst distributes over if-then-else (needed because simp can't do this alone)
-private theorem ite_fst {α β : Type} (p : Prop) [Decidable p] (a b : α × β) :
-    (if p then a else b).1 = if p then a.1 else b.1 := by
-  by_cases hp : p <;> simp [hp]
 
 private theorem sqrtExact_false_dfSign (e : Int) (sig : Nat) :
     (sqrtExact (.finite false e sig)).1.dfSign = false := by
   match sig with
   | 0     => simp [sqrtExact, DecodedFloat.dfSign]
   | _ + 1 => simp [sqrtExact, DecodedFloat.dfSign]
-
-private theorem roundTo_false_dfSign (fmt : FPFormat) (rm : RoundMode)
-    (d : DecodedFloat) (hs : d.dfSign = false) :
-    (roundTo fmt rm d).1.dfSign = false := by
-  match d with
-  | .nan             => simp [roundTo, DecodedFloat.dfSign]
-  | .inf false       => simp [roundTo, DecodedFloat.dfSign]
-  | .inf true        => simp [DecodedFloat.dfSign] at hs
-  | .finite false _ 0        => simp [roundTo, DecodedFloat.dfSign]
-  | .finite false e (_ + 1) =>
-    -- Use ite_fst so simp can distribute .1 over every if-then-else branch,
-    -- then dfSign evaluates to false in all cases (sign field is always false).
-    simp only [roundTo, ite_fst, DecodedFloat.dfSign]
-    grind
-  | .finite true _ _ => simp [DecodedFloat.dfSign] at hs
-
-private theorem roundTo_true_dfSign (fmt : FPFormat) (rm : RoundMode)
-    (d : DecodedFloat) (hs : d.dfSign = true) :
-    (roundTo fmt rm d).1.dfSign = true := by
-  match d with
-  | .nan                    => simp [DecodedFloat.dfSign] at hs
-  | .inf false              => simp [DecodedFloat.dfSign] at hs
-  | .inf true               => simp [roundTo, DecodedFloat.dfSign]
-  | .finite false _ 0       => simp [DecodedFloat.dfSign] at hs
-  | .finite false _ (_ + 1) => simp [DecodedFloat.dfSign] at hs
-  | .finite true _ _        =>
-    simp only [roundTo, ite_fst, DecodedFloat.dfSign]
-    grind
 
 private theorem encode_false_sign (d : DecodedFloat) (hs : d.dfSign = false) :
     (F32.encode d).sign = false := by

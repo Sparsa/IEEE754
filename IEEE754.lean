@@ -2557,8 +2557,36 @@ theorem fadd_inf_finite {rm : RoundMode} {a b : F32}
 /-- ∞ × nonzero finite = ∞ (sign = XOR of operand signs). -/
 theorem fmul_inf_nonzero {rm : RoundMode} {a b : F32}
     (ha : a.isInf) (hb : b.isFinite) (hnz : ¬b.isZero) :
-    (F32.fmul rm a b).isInf ∧ (F32.fmul rm a b).sign = (a.sign != b.sign) := by sorry
+    (F32.fmul rm a b).isInf ∧ (F32.fmul rm a b).sign = (a.sign != b.sign) := by
+    have a_notn : a.isNaN = false := isNaN_false_of_isInf a ha
+    have b_notn : b.isNaN = false := isNaN_false_of_isFinite b hb
+    have b_notinf : b.isInf = false := isInf_false_of_isFinite b hb
+    simp [isInf]
+    rw [_root_.and_assoc]
+    constructor
+    ·{
+      simp [fmul, fmulEx,decode]
+      simp [a_notn , ha]
+      simp [b_notn,b_notinf]
+      by_cases hh: b.isZero
+      ·{
+        simp [hh]
+        simp [mulExact]
+        simp [roundTo]
+        simp [encode]
+        bv_decide
+      }
+      ·{
+        simp [hh]
+        simp [mulExact]
+        simp [roundTo]
+        simp [encode]
+        simp [pack]
+        cases a.sign <;> cases b.sign <;>
+        ·{
 
+        }
+      }
 /-- Nonzero finite / 0 = ∞ (division by zero; §7.3). -/
 theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}
     (ha : a.isFinite) (hna : ¬a.isZero) (hb : b.isZero) :
@@ -2709,15 +2737,105 @@ theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}
           simp [b_not_nan, b_not_inf]
           intro b_is_not_z
           simp_all
-        have a_normal : a.decode = .finite
+        have a_nor : a.decode = .finite a.sign (a.expRaw - 127).toInt (a.significand.toNat + 8388608) :=  by
+          simp[decode]
+          simp [a_not_nan]
+          simp [a_not_zero]
+          simp [a_not_inf]
+          sorry
         simp [fdiv]
         simp [fdivEx]
         simp [divExact]
         simp [divExactWith]
-        simp [b_z]
-
+        split
+        ·{
+          simp[roundTo]
+          simp [encode]
+          native_decide
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          simp [pack]
+          simp [expIsMax]
+          simp [expRaw]
+          split <;>
+          ·{
+            native_decide
+          }
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          simp_all
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          simp_all
+          simp [pack]
+          by_cases h: (a.sign = b.sign) <;>
+          ·{
+            simp [h]
+            native_decide
+          }
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          simp [pack]
+          simp [expIsMax]
+          simp [expRaw]
+          split <;>
+          ·{
+            simp_all
+          }
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          simp [pack]
+          simp [expIsMax]
+          simp [expRaw]
+          split <;>
+          ·{
+            simp_all
+          }
+        }
       }
-     }
+      ·{ -- when a is inf
+        simp [fdiv, fdivEx,decode]
+        simp [a_notn , a_notinf]
+        simp at hna
+        simp [hna]
+        simp [b_notn]
+        simp [b_ninf]
+        simp [hb]
+        by_cases hh : a.isNormal <;>
+        ·{
+          simp [hh]
+          simp [divExact]
+
+          simp [divExactWith]
+
+        }
+       }
+      }
 
 
 
@@ -2770,7 +2888,63 @@ theorem fdiv_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
     (hza : ¬a.isZero) (hzb : ¬b.isZero)
     (hr  : ¬(F32.fdiv rm a b).isNaN) :
-    (F32.fdiv rm a b).sign = (a.sign != b.sign) := by sorry
+    (F32.fdiv rm a b).sign = (a.sign != b.sign) := by
+    simp [fdiv]
+    simp [fdivEx]
+    simp [divExact]
+    simp [divExactWith]
+    split
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp_all
+      rename_i heq
+      simp [sign]
+      simp [decode] at heq
+      simp [hna] at heq
+      simp [hza] at heq
+      simp [qNaN]
+      simp [pack]
+    }
+    ·{
+      simp_all
+      simp [roundTo]
+      simp [encode]
+      simp [qNaN]
+      simp [sign]
+      simp [pack]
+
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp [qNaN]
+      simp_all
+      simp [sign]
+      simp [pack]
+
+
+
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp [qNaN]
+      simp_all
+      simp [sign]
+      simp [pack]
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp_all
+      simp [sign]
+      simp [pack]
+      split <;>
+      ·{
+        simp_all
+      }
+    }
 
 /-- When both addends share the same sign, so does a nonzero result. -/
 theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
@@ -2863,9 +3037,13 @@ theorem flt_trans {a b c : F32}
             | false => exact Or.inr hc
 
       ·
-        simp_all
-        by_cases a.sign <;> by_cases b.sign <;> by_cases c.sign <;>
-        simp_all
+
+
+
+
+
+        }
+
 
 
 
@@ -2965,16 +3143,8 @@ theorem fsub_self_isZero (rm : RoundMode) (a : F32) (h : ¬a.isNaN) (hi : ¬a.is
 /-- +0 is a right additive identity under IEEE equality (for non-NaN a). -/
 theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
     F32.feq (F32.fadd rm a F32.posZero) a := by
-    simp [fadd]
-    simp [faddEx]
-    simp [addExact]
-    split
-    · {
-      simp [roundTo]
-      simp [encode]
-      simp [feq]
-      constructor
-      ·
+    exfalso
+
 
 
 -- ── I. FMA: true single rounding (IEEE 754-2019 §5.4.1) ──────────────────────
@@ -2997,8 +3167,11 @@ theorem fmaEx_flags_eq (rm : RoundMode) (a b c : F32) :
     Hint: try a = b = (1 + ulp(1)/2) and c = −1. -/
 theorem fma_ne_mul_then_add :
     ∃ (a b c : F32),
-      F32.fma .RNE a b c ≠ F32.fadd .RNE (F32.fmul .RNE a b) c := by
-      sorry
+      F32.fma .RNE a b c ≠ F32.fadd .RNE (F32.fmul .RNE a b) c :=
+  -- a = b = 4097.0: exact product 4097² = 16785409 rounds to 16785408 (RNE tie-to-even),
+  -- so fadd(fmul(a,b), c) = 0, but fma computes round(16785409 - 16785408) = 1.
+  ⟨0x45800800, 0x45800800, 0xCB801000, by native_decide⟩
+
 
 -- ── J. Square root (IEEE 754-2019 §5.4.1, §6.3, §7.2) ───────────────────────
 
@@ -3116,7 +3289,7 @@ theorem fsqrt_neg_isNaN (rm : RoundMode) (a : F32)
                 simp [aNorm] at right
                 have ⟨rr,ll⟩ := right
                 simp [isNormal] at aNorm
-                decide
+                have
 
 
 
@@ -3222,97 +3395,118 @@ theorem fsqrt_negZero (rm : RoundMode) :
     decide
 
 
+-- ── Sign-preservation helpers for fsqrt_nonneg ───────────────────────────────
+
+private theorem pack_sign_false (e : BitVec 8) (m : BitVec 23) :
+    (F32.pack false e m).sign = false := by
+  simp [pack, sign]
+
+-- fst distributes over if-then-else (needed because simp can't do this alone)
+private theorem ite_fst {α β : Type} (p : Prop) [Decidable p] (a b : α × β) :
+    (if p then a else b).1 = if p then a.1 else b.1 := by
+  by_cases hp : p <;> simp [hp]
+
+private theorem sqrtExact_false_dfSign (e : Int) (sig : Nat) :
+    (sqrtExact (.finite false e sig)).1.dfSign = false := by
+  match sig with
+  | 0     => simp [sqrtExact, DecodedFloat.dfSign]
+  | _ + 1 => simp [sqrtExact, DecodedFloat.dfSign]
+
+private theorem roundTo_false_dfSign (fmt : FPFormat) (rm : RoundMode)
+    (d : DecodedFloat) (hs : d.dfSign = false) :
+    (roundTo fmt rm d).1.dfSign = false := by
+  match d with
+  | .nan             => simp [roundTo, DecodedFloat.dfSign]
+  | .inf false       => simp [roundTo, DecodedFloat.dfSign]
+  | .inf true        => simp [DecodedFloat.dfSign] at hs
+  | .finite false _ 0        => simp [roundTo, DecodedFloat.dfSign]
+  | .finite false e (_ + 1) =>
+    -- Use ite_fst so simp can distribute .1 over every if-then-else branch,
+    -- then dfSign evaluates to false in all cases (sign field is always false).
+    simp only [roundTo, ite_fst, DecodedFloat.dfSign]
+    grind
+  | .finite true _ _ => simp [DecodedFloat.dfSign] at hs
+
+private theorem roundTo_true_dfSign (fmt : FPFormat) (rm : RoundMode)
+    (d : DecodedFloat) (hs : d.dfSign = true) :
+    (roundTo fmt rm d).1.dfSign = true := by
+  match d with
+  | .nan                    => simp [DecodedFloat.dfSign] at hs
+  | .inf false              => simp [DecodedFloat.dfSign] at hs
+  | .inf true               => simp [roundTo, DecodedFloat.dfSign]
+  | .finite false _ 0       => simp [DecodedFloat.dfSign] at hs
+  | .finite false _ (_ + 1) => simp [DecodedFloat.dfSign] at hs
+  | .finite true _ _        =>
+    simp only [roundTo, ite_fst, DecodedFloat.dfSign]
+    grind
+
+private theorem encode_false_sign (d : DecodedFloat) (hs : d.dfSign = false) :
+    (F32.encode d).sign = false := by
+  match d with
+  | .nan             => simp [encode, qNaN, pack, sign];
+  | .inf false       => simp [encode]; exact pack_sign_false _ _
+  | .inf true        => simp [DecodedFloat.dfSign] at hs
+  | .finite false _ 0        => simp [encode]; exact pack_sign_false _ _
+  | .finite false e (_ + 1) =>
+    simp only [encode]
+    -- biasedExp ≤ 0 → pack false 0 (…)
+    -- biasedExp ≥ 0xFF, sign=false → posInf
+    -- else → pack false (…) (…)
+    split
+    · exact pack_sign_false _ _
+    · split
+      · simp [posInf, pack, sign];
+      · exact pack_sign_false _ _
+  | .finite true _ _ => simp [DecodedFloat.dfSign] at hs
+
 /-- The result of fsqrt is always non-negative when it is not NaN. -/
 theorem fsqrt_nonneg (rm : RoundMode) (a : F32) (h : ¬(F32.fsqrt rm a).isNaN) (anNeg :
 a.sign = false) :
     (F32.fsqrt rm a).sign = false := by
-   -- simp at h
-   -- simp [isNaN] at h
-    cases ha : classify a
-    ·
-      have aZ : a.isZero = true := by
-                have bj := biject_class_zero a
-                have ⟨left,right⟩ := bj
-                rw [ ha] at right
-                simp at right
-                exact right
-      simp [fsqrt]
-      simp [fsqrtEx]
-      simp[ sqrtExact ]
-      split
-      .
-        simp
-        simp [roundTo]
-        simp [encode]
-        decide
-      ·
-        simp
-        simp [roundTo]
-        simp [encode]
-        simp [pack]
-        decide
-      ·
-        simp
-        simp [roundTo]
-        simp [encode]
-        decide
-      ·
-        simp
-        simp [roundTo]
-        simp [encode]
-        simp [pack]
-        rename_i df s exp ad
-        by_cases hs: s
-        ·
-          rw [hs]
-          simp_all
-          simp [decode] at ad
-          simp_all
-          have a_notNaN :a.isNaN = false :=  isNaN_false_of_isZero a aZ
-          have a_notInf :a.isInf = false := isInf_false_of_isZero a aZ
-          rw [a_notNaN,a_notInf] at ad
-          simp_all
-        ·
-          simp_all
-          native_decide
-    ·
-      simp [fsqrt]
-      simp [fsqrtEx]
-      simp [decode]
-      split
-      ·
-        simp [sqrtExact]
-        simp [roundTo]
-        simp [encode]
-        native_decide
-      ·
-        rename_i hnan
-        simp_all
-        split
-        ·
-          simp [sqrtExact]
-          simp [roundTo]
-          simp [encode]
-          native_decide
-        ·
-          split
-          ·
-            simp [sqrtExact]
-            simp [roundTo]
-            simp [encode]
-            native_decide
-          ·
-            simp [sqrtExact]
-            simp [roundTo]
-            simp [encode]
-            rename_i a_not_inf a_not_zero
-            simp_all
-
-          ·
-
-
-
-    ·
+  -- If a is NaN then fsqrt a is NaN, contradicting h.
+  have hnan : a.isNaN = false := by
+    by_cases hnn : a.isNaN
+    · simp at h
+      simp [fsqrt] at h
+      simp [fsqrtEx] at h
+      simp [sqrtExact] at h
+      have adnan: a.decode = DecodedFloat.nan := by simp [decode, hnn]
+      simp [adnan] at h
+      simp [roundTo] at h
+      simp [encode] at h
+      simp [qNaN] at h
+      simp [pack] at h
+      simp [isNaN] at h
+      simp [expIsMax,mantIsZero] at h
+      simp [expRaw] at h
+      simp [mantissa] at h
+    · simp at hnn
+      exact hnn
+    --simp only [Bool.not_eq_false] at hc
+    --exact h (fsqrt_nan rm a hc)
+  simp only [F32.fsqrt, fsqrtEx]
+  -- Establish that decode a has dfSign = false.
+  have decode_sign : (decode a).dfSign = false := by
+    simp only [decode, hnan, anNeg]
+    split <;> simp [DecodedFloat.dfSign]
+    grind
+  -- Establish sqrtExact output dfSign = false.
+  have sqrt_sign : (sqrtExact (decode a)).1.dfSign = false := by
+    cases hinf : a.isInf with
+    | true =>
+      simp only [decode, hnan, hinf, anNeg, ↓reduceIte, sqrtExact, DecodedFloat.dfSign]
+      grind
+    | false =>
+      cases hzero : a.isZero with
+      | true =>
+        simp only [decode, hnan, hinf, hzero, anNeg, ↓reduceIte, sqrtExact, DecodedFloat.dfSign]
+        grind
+      | false =>
+        simp only [decode, hnan, hinf, hzero, anNeg ]
+        exact sqrtExact_false_dfSign _ _
+  -- roundTo and encode preserve dfSign = false.
+  exact encode_false_sign _
+    (roundTo_false_dfSign f32Fmt rm (sqrtExact (decode a)).1 sqrt_sign)
 
 
 /-- The flags from fsqrtEx are the union of those from sqrtExact and roundTo

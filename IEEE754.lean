@@ -3195,113 +3195,78 @@ theorem fsqrt_nan (rm : RoundMode) (a : F32) (h : a.isNaN) :
     simp [encode]
     decide
 
+theorem bit_vec_mod_power (a: BitVec n) : a.toNat % 2^n = 0 → a.toNat = 0 := by
+  intro h
+  have h0 : a.toNat < 2^n := by
+    exact isLt a
+  have hzero : a.toNat = 0 := by
+    rwa [Nat.mod_eq_of_lt h0] at h
+  exact hzero
 
-
+#eval 2^24
+example (a: BitVec n): a.toNat < 2^n := by exact?
 /-- √(negative finite) raises invalidOp and returns NaN (§7.2). -/
 theorem fsqrt_neg_isNaN (rm : RoundMode) (a : F32)
     (hs : a.sign = true) (hf : a.isFinite) (hz : ¬a.isZero) :
     (F32.fsqrt rm a).isNaN ∧ (F32.fsqrtEx rm a).2.invalidOp := by
-    simp [isNaN]
-    simp [fsqrt]
-    simp [fsqrtEx]
-    constructor
-    ·
-      simp [expIsMax]
-      simp [mantIsZero]
-      constructor
-      ·
-        simp [decode]
-        split
-        ·
-          simp [sqrtExact]
-          simp [roundTo]
-          simp [encode]
-          simp [expRaw]
-          decide
-        ·
-          rename_i anotNan
-          split
-          ·
-            simp [sqrtExact]
-            split
-            ·
-              simp
-              simp [roundTo]
-              simp [encode]
-              decide
-            ·
-             simp
-             simp [roundTo]
-             simp [encode]
-             simp [pack]
-             decide
-            ·
-              simp
-              simp [roundTo]
-              simp [encode]
-              decide
-            ·
-              simp
-              simp [roundTo]
-              simp [encode]
-              simp [pack]
-              rename_i heq
-              rename_i  ainf a1 s exp
-              simp at heq
-            ·
-              simp
-              simp [roundTo]
-              simp [encode]
-              decide
-          · {
-            rename_i anotinf
-            simp [sqrtExact]
-            split
-            {
-              simp
-              simp [roundTo]
-              simp [encode]
-              decide
-            }
-            {
-              simp
-              simp [roundTo]
-              simp [encode]
-              simp [pack]
-              decide
-            }
-            {
-              simp
-              simp [roundTo]
-              simp [encode]
-              decide
-            }
-            {
-              rename_i a1 s exp df
-              simp
-              simp [roundTo]
-              simp [encode]
-              simp [pack]
-              simp_all
-              have ⟨left,right⟩ := df
-              cases aNorm : a.isNormal
-              ·
-                simp [aNorm] at right
-                have ⟨rr,ll⟩ := right
-                simp [isNormal] at aNorm
-                have
-
-
-
-}
-
-
-
-
-}
-        }
-
-
+  have hZ   : a.isZero  = false := by simpa using hz
+  have hNaN : a.isNaN   = false := isNaN_false_of_isFinite a hf
+  have hInf : a.isInf   = false := isInf_false_of_isFinite a hf
+  -- decode reduces to the else branch; sign becomes true
+  have hdec : F32.decode a = .finite true
+      ((if a.isNormal then (a.expRaw.toNat : Int) else 1) - 127 - 23)
+      a.significand.toNat := by
+    simp [F32.decode, hNaN, hInf, hZ, hs]
+  -- significand is nonzero: a is finite, non-NaN, non-Inf, non-zero
+  have hsig : a.significand.toNat ≠ 0 := by
+    rcases finite_classify a hNaN hInf with h | h | h
+    · -- isZero: contradicts hZ
+      simp [hZ] at h
+    · -- isSubnormal: mantIsZero = false, so significand = mantissa ≠ 0
+      have hExpZ    : a.expIsZero  = true  := by simp [isSubnormal] at h; exact h.1
+      have hMantNZ  : a.mantIsZero = false := by simp [isSubnormal] at h; exact h.2
+      have hNotNorm : a.isNormal   = false := by simp [isNormal, hExpZ]
+      simp [F32.mantIsZero] at hMantNZ
+      -- significand.toNat ≠ 0: subnormal ⟹ significand = mantissa, mantIsZero = false
+      intro h0
+      simp only [F32.significand, hNotNorm] at h0
+      apply hMantNZ
+      apply BitVec.eq_of_toNat_eq
+      have hext : (a.mantissa.zeroExtend 24).toNat = a.mantissa.toNat :=
+        BitVec.toNat_setWidth_of_le (by omega)
+      simp at h0
+      have pow_24 : 2^24 = 16777216 := by decide
+      rw [← pow_24] at h0
+      have a_man_zero : a.mantissa.toNat = 0 := by
+        rw [← hext] at h0
+        exact bit_vec_mod_power (zeroExtend 24 a.mantissa) h0
+      simp
+      exact a_man_zero
+    · -- isNormal: leading bit 2^23 is set → significand ≥ 2^23 > 0
+      have hNorm : a.isNormal = true := h
+      intro h0
+      simp only [F32.significand, hNorm, if_true] at h0
+      have h_lbit : Nat.testBit ((1 : BitVec 24) <<< 23).toNat 23 = true := by decide
+      have hbit : Nat.testBit
+          (((1 : BitVec 24) <<< 23).toNat ||| (a.mantissa.zeroExtend 24).toNat) 23 = true := by
+        rw [Nat.testBit_or, h_lbit]; simp
+      have hge : ((1 : BitVec 24) <<< 23).toNat ||| (a.mantissa.zeroExtend 24).toNat ≥ 2^23 :=
+        Nat.ge_two_pow_of_testBit hbit
+      rw [BitVec.toNat_or] at h0
+      grind
+  -- sqrtExact of .finite true _ (n+1) returns (.nan, mkInvalidOp)
+  have hsqrt : sqrtExact (F32.decode a) = (.nan, ExcFlags.mkInvalidOp) := by
+    rw [hdec]
+    match h0 : a.significand.toNat with
+    | 0     => exact absurd h0 hsig
+    | _ + 1 => simp [sqrtExact]
+  constructor
+  · -- isNaN: roundTo/encode preserve NaN
+    simp only [F32.fsqrt, F32.fsqrtEx, hsqrt, roundTo]
+    exact encode_nan_isNaN
+  · -- invalidOp: ef = mkInvalidOp, roundTo of nan raises no extra flags
+    simp only [F32.fsqrtEx, hsqrt, roundTo]
+    decide
 
 
 
@@ -3400,7 +3365,9 @@ theorem fsqrt_negZero (rm : RoundMode) :
 private theorem pack_sign_false (e : BitVec 8) (m : BitVec 23) :
     (F32.pack false e m).sign = false := by
   simp [pack, sign]
-
+private theorem pack_sign_true (e : BitVec 8) (m : BitVec 23) :
+    (F32.pack true e m).sign = true := by
+  simp [pack, sign]
 -- fst distributes over if-then-else (needed because simp can't do this alone)
 private theorem ite_fst {α β : Type} (p : Prop) [Decidable p] (a b : α × β) :
     (if p then a else b).1 = if p then a.1 else b.1 := by

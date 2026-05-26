@@ -105,15 +105,97 @@ private theorem mantissa_index (f:F32) (i:Nat) (h: i< 23) : f.mantissa[i] = f[i]
 
 
 
+example {i n:Nat} (m: BitVec n) (h:i < n) :
+  m[i] = m.getLsbD i := by exact?
 
-set_option diagnostics true
-set_option maxRecDepth 200
-private theorem pack_sign_expRaw_mantissa (f : F32) :
+--have hii: (2147483648#32)[i] = (2147483648#32).getLsbD i := by
+--    exact Eq.symm (BitVec.getLsbD_eq_getElem h)
+
+theorem sign_bit_getLsbD_false {i : Nat} (h : i < 31) :
+    (2147483648#32)[i]= false := by
+  simp [← BitVec.getLsbD_eq_getElem]
+  simp [BitVec.getLsbD_ofNat]
+  rw [show (2147483648 : Nat) = 1 <<< 31 from by decide]
+  rw [Nat.testBit_shiftLeft]
+  intro
+  simp
+  intro
+  simp [Nat.testBit]
+  omega
+
+theorem pack_sign_expRaw_mantissa (f : F32) :
     F32.pack f.sign f.expRaw f.mantissa = f := by
   simp only [F32.pack, F32.sign, F32.expRaw, F32.mantissa]
-  cases h : f.getLsbD 31
-  · simp only [h, if_false]; bv_omega
-  · simp only [h, if_true];  bv_omega
+  split
+  ·{
+    simp_all
+    apply eq_of_getLsbD_eq
+    intro i hi
+    simp [BitVec.getLsbD_setWidth]
+    simp [hi]
+    by_cases h23 : i < 23
+    ·{
+      simp [h23]
+      -- only 31'th bit is true rest is false
+      have h_l_31 : i < 31 := by omega
+      have hi_23 :  (2147483648#32)[i] = false := by  exact  sign_bit_getLsbD_false h_l_31
+      simp_all
+    }
+    ·{
+      simp_all
+      by_cases h32 : i = 31
+      ·{
+        simp_all
+      }
+      ·{
+        have h23' : ¬ (i < 23) := by simp_all
+        simp [h23']
+        simp_all
+        have h2332 : i - 23 < 32 := by
+          by_cases h233 : i > 23
+          ·{
+            simp_all
+            omega
+          }
+          ·{
+            simp_all
+          }
+        simp[h2332]
+        --- only 31th bit is true rest is false, and h32 tells us that i != 31
+        have h_l_31 : i < 31 := by omega
+        have hi_31 : ((2147483648#32)[i] = false) := by exact sign_bit_getLsbD_false h_l_31
+        simp [hi_31]
+        intro
+        omega
+      }
+    }
+  }
+  ·{
+    simp_all
+    apply eq_of_getLsbD_eq
+    intro i hi
+    simp_all
+    by_cases h23 : i < 23
+    ·{
+      simp [h23]
+    }
+    ·{
+      simp [h23]
+      simp at h23
+      simp_all
+      by_cases h31 : i = 31
+      ·{
+        simp_all
+      }
+      ·{
+        intro
+        omega
+      }
+
+    }
+
+  }
+
 
 /-- findLeadingBit of any n in [2^k, 2^(k+1)) equals k. -/
 private theorem findLeadingBit_range (n k : Nat) (hge : 2^k ≤ n) (hlt : n < 2^(k+1)) :
@@ -124,7 +206,11 @@ private theorem findLeadingBit_range (n k : Nat) (hge : 2^k ≤ n) (hlt : n < 2^
   have hhi : n.testBit (k + 1) = false := Nat.testBit_lt_two_pow hlt
   have hlo : n.testBit k = true  :=
     Nat.testBit_of_two_pow_le_and_two_pow_add_one_gt hge hlt
-  simp only [findLeadingBit.go, hhi, if_false, hlo, if_true]
+  simp [findLeadingBit.go]
+  rw [hhi]
+  simp
+
+
 
 /-- Nat → UInt8 → BitVec 8: toNat recovers n when n < 256. -/
 private theorem nat_toUInt8_toBitVec_toNat {n : Nat} (h : n < 256) :
@@ -140,7 +226,11 @@ private theorem nat_toUInt32_trunc23_toNat {n : Nat} (h : n < 2^23) :
              BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show n < 2^32 by omega),
              Nat.mod_eq_of_lt h]
 
--- ── encode_decode_normal
+ -- 2^ 23 ||| f.mantissa.toNat = 2 ^ 23 + f.mantissa.toNat
+
+
+
+--- encode_decode_normal
 theorem encode_decode_normal {f : F32} (h : f.isNormal) :
     F32.encode (F32.decode f) = f := by
   have hExpZero : f.expIsZero = false := by simp [isNormal] at h; exact h.1
@@ -149,99 +239,104 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
   have hNotInf  : f.isInf  = false := by simp [isInf,  hExpMax]
   have hNotZero : f.isZero = false := by simp [isZero, hExpZero]
   have hNotsub  : f.isSubnormal = false := by exact isSubnormal_false_of_isNormal f h
+  have hMantLt  : f.mantissa.toNat < 2^23 := f.mantissa.isLt
+  have exp_23 : 8388608 = 2^ 23 := by decide
+  have exp_24 : 16777216 = 2^ 24 := by decide
+
+
   -- Dispatch the non-normal cases by contradiction
   cases hf : classify f
-  ·{ simp [classify] at hf; simp [hNotInf] at hf; simp [h] at hf; simp [hNotsub] at hf; simp_all }
-  ·{ simp [classify] at hf; simp [hNotZero] at hf; simp [h] at hf; simp_all }
+  ·{ simp [classify] at hf; simp [hNotInf] at hf; simp [h] at hf; simp [hNotsub] at hf; simp_all
+  }
+  ·{ simp [classify] at hf; simp [hNotZero] at hf; simp [h] at hf; simp_all
+  }
   ·{
     simp[encode]
     induction ih: f.decode with
-    | nan  => simp
-              simp [decode] at ih
-              simp [hNotNaN,hNotInf,hNotZero] at ih
-    | inf sign => simp
-                  simp [decode] at ih
-                  simp [hNotNaN,hNotInf,hNotZero] at ih
+    | nan  =>
+      simp
+      simp [decode] at ih
+      simp [hNotNaN,hNotInf,hNotZero] at ih
+    | inf sign =>
+      simp
+      simp [decode] at ih
+      simp [hNotNaN,hNotInf,hNotZero] at ih
     | finite sign exp sig =>
-        simp [decode] at ih
-        simp [hNotNaN,hNotInf,hNotZero,h] at ih
-        obtain ⟨hsign, hexp, hsig⟩ := ih
-        -- Reduce the match — sig ≠ 0 for normal floats
-        subst hsign
-        have hsigNZ : sig ≠ 0 := by
-          rw [← hsig]
-          simp [F32.significand] at hNotZero hNotsub ⊢
-          -- normal float has nonzero significand
-          intro lh
-          simp [h] at lh
-          grind
-        simp
-        -- Now show the middle branch is taken (not subnormal, not overflow)
-        have hflb : findLeadingBit sig (sig.log2 + 1) ≤  sig.log2 := by exact findLeadingBit_le sig
-        simp [F32.expRaw, F32.expIsZero] at hExpZero
-        have : f.expRaw ≠ 0#8 := by
-          intro heq
-          apply hExpZero
-          simp [expRaw] at heq
-          have := f.expRaw.isLt  -- expRaw.toNat < 256
-          omega
-        have hne : f.expRaw.toNat ≠ 0 := by
-            intro h
-            apply this
-            exact BitVec.eq_of_toNat_eq (by simp [h])
+      simp [decode] at ih
+      simp [hNotNaN,hNotInf,hNotZero,h] at ih
+      obtain ⟨hsign, hexp, hsig⟩ := ih
+      -- Reduce the match — sig ≠ 0 for normal floats
+      subst hsign
 
-        have hexpNZ : f.expRaw.toNat ≥ 1 := by omega
-        have hflb' : (findLeadingBit sig (sig.log2 + 1) : Int) ≥ 0 := by exact
-        have hlo : ¬ (exp + ↑(findLeadingBit sig (sig.log2 + 1)) + 127 ≤ 0) := by
-          rw [← hexp]
-          have h_sig_size : 2^23 ≤ sig := by sorry
-          have h_flb_23 : 23 ≤ findLeadingBit sig (1 + sig.log2) := by sorry
-          omega
-        have hlo : ¬ (exp + ↑(findLeadingBit sig (sig.log2 + 1)) + 127 ≤ 0) := by
-          rw [← hexp]
-          rw [Nat.add_comm]
-          have h_sig_size : 2^23 ≤ sig := by
+      have hsigNZ : sig ≠ 0 := by
+        rw [← hsig]
+        simp [F32.significand] at hNotZero hNotsub ⊢
+        -- normal float has nonzero significand
+        intro lh
+        simp [h] at lh
+        grind
+      simp
+      -- Now show the middle branch is taken (not subnormal, not overflow)
 
-          -- apply a lemma like `F32.normal_significand_bounds hf`
+      have hflb : findLeadingBit sig (sig.log2 + 1) ≤  sig.log2 := by exact findLeadingBit_le sig
+      simp [F32.expRaw, F32.expIsZero] at hExpZero
 
+      have : f.expRaw ≠ 0#8 := by
+        intro heq
+        apply hExpZero
+        simp [expRaw] at heq
+        have := f.expRaw.isLt  -- expRaw.toNat < 256
+        omega
 
-          have h_flb : 23 ≤ findLeadingBit sig (1 + sig.log2) := by
-          -- use h_sig_size to prove the leading bit is at least 23
-          sorry
+      have hne : f.expRaw.toNat ≠ 0 := by
+          intro h
+          apply this
+          exact BitVec.eq_of_toNat_eq (by simp [h])
 
--- Once you have h_flb, omega will instantly close the goal:
-omega
-          have h_flb_23 : 23 ≤ findLeadingBit sig (1 + sig.log2) := by
+      have hexpNZ : f.expRaw.toNat ≥ 1 := by omega
 
-  -- This step requires a lemma from your specific F32 library
-  -- connecting `hf : f.classify = F32Class.normal` to the significand size.
-  sorry
-          have h_goal_simped : (↑f.expRaw.toNat - 23 + ↑(findLeadingBit sig (1 + sig.log2)) > 0) := by omega
+      have hflb' : (findLeadingBit sig (sig.log2 + 1) : Int) ≥ 0 := by exact
 
-
-        have hhi : ¬ (255 ≤ exp + ↑(findLeadingBit sig (sig.log2 + 1)) + 127) := by
-          rw [← hexp]
-          simp [F32.expRaw, F32.expIsMax] at hExpMax
+      have h_flb_23 : 23 ≤ findLeadingBit sig (1 + sig.log2) := by
+        rw [Nat.add_comm]
+        rw [← hsig]
+        simp[findLeadingBit]
+        simp [findLeadingBit.go]
+        simp [Nat.testBit]
+        split
+        ·{
           simp_all
-          have hexpLt : f.expRaw.toNat ≤ 254 := by
-            have hexpl256: f.expRaw.toNat < 256 := f.expRaw.isLt
-            have hxpN255 : f.expRaw.toNat ≠ 255 := by
-              intro heq
-              simp [F32.expRaw] at heq
-              bv_omega
+          rw [hsig] at hMantLt
+        }
+        sorry
+
+      have h_goal_simped : (↑f.expRaw.toNat - 23 + ↑(findLeadingBit sig (1 + sig.log2)) > 0) := by omega
+
+
+      have hhi : ¬ (255 ≤ exp + ↑(findLeadingBit sig (sig.log2 + 1)) + 127) := by
+        rw [← hexp]
+        simp [F32.expRaw, F32.expIsMax] at hExpMax
+        simp_all
+        have hexpLt : f.expRaw.toNat ≤ 254 := by
+          have hexpl256: f.expRaw.toNat < 256 := f.expRaw.isLt
+          have hxpN255 : f.expRaw.toNat ≠ 255 := by
+            intro heq
+            simp [F32.expRaw] at heq
             bv_omega
-          have hlt : sig < 2^24 := by
-            have := f.significand.isLt
-            rw [← hsig]
-            exact this
-          have hlog : sig.log2 ≤ 23 := by
-              have h := Nat.log2_lt (by omega) |>.mpr hlt
-              omega
-          have hflb2 : (findLeadingBit sig (sig.log2 + 1) : Int) ≤ 23 := by
-            have mid: findLeadingBit sig (sig.log2 + 1) ≤ 23 := by omega
-            exact_mod_cast mid
-          omega
-  }
+          bv_omega
+        have hlt : sig < 2^24 := by
+          have := f.significand.isLt
+          rw [← hsig]
+          exact this
+        have hlog : sig.log2 ≤ 23 := by
+            have h := Nat.log2_lt (by omega) |>.mpr hlt
+            omega
+        have hflb2 : (findLeadingBit sig (sig.log2 + 1) : Int) ≤ 23 := by
+          have mid: findLeadingBit sig (sig.log2 + 1) ≤ 23 := by omega
+          exact_mod_cast mid
+        simp_all
+        omega
+    }
   ·{ simp [classify] at hf; simp [hNotZero] at hf; simp [h] at hf; simp [hNotsub] at hf }
   ·{ simp [classify] at hf; simp [hNotZero] at hf; simp [hNotsub] at hf; simp [h] at hf }
 

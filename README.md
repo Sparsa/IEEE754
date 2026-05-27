@@ -140,7 +140,7 @@ IEEE754/
 └── Theorems/
     ├── Classification.lean   §11a     exclusivity lemmas, F32Class
     ├── Props.lean            §11b     algebraic properties, roundTo lemmas
-    ├── Codec.lean            §11c     encode/decode round-trip theorems
+    ├── Codec.lean            §11c     encode/decode round-trip theorems ✅
     ├── NaN.lean              §11B–C   NaN propagation and invalid-op cases
     ├── Inf.lean              §11D     Inf arithmetic theorems
     └── Sign.lean             §11E–J   sign rules, order, FMA, sqrt theorems
@@ -184,10 +184,10 @@ Basic
 
 ### `IEEE754.ExactOps` — §4–5
 
-**Private helpers:**
+**Helpers:**
 
-- `intSqrt : Nat → Nat` — Newton's method integer square root (O(log log x) iterations)
-- `findLeadingBit : Nat → Nat → Nat` — position of the highest set bit
+- `intSqrt : Nat → Nat` *(private)* — Newton's method integer square root (O(log log x) iterations)
+- `findLeadingBit : Nat → Nat → Nat` — position of the highest set bit (exported; used in `Theorems/Codec.lean`)
 
 **Exact arithmetic (return `DecodedFloat × ExcFlags`):**
 
@@ -197,7 +197,7 @@ Basic
 | `mulExact` | Exact multiplication; sign = XOR, exp = sum, sig = product |
 | `divExact` / `divExactWith` | Exact division; detects divide-by-zero and infinite cases |
 | `fmaExact` | Fused multiply-add: one exact result, single-rounding guarantee |
-| `sqrtExact` | Square root via integer sqrt on scaled significand |
+| `sqrtExact` | Square root via integer sqrt on scaled significand (scaled by 4⁶⁰ for guard bits) |
 
 **Rounding:**
 
@@ -282,6 +282,13 @@ inductive F32Class where
 
 `classify : F32 → F32Class` maps every bit-vector to exactly one class.
 
+**Partition lemmas** (all proved):
+
+| Theorem | Statement |
+|---------|-----------|
+| `classify_exclusive` | Every float belongs to exactly one class (proven as a list-sum = 1) |
+| `finite_classify` | `¬isNaN → ¬isInf → isZero ∨ isSubnormal ∨ isNormal` |
+
 **Exclusivity lemmas** (all proved, used throughout the theorem chain):
 
 - `isZero_false_of_{isSubnormal, isNormal, isInf, isNaN}`
@@ -317,25 +324,27 @@ Selected properties:
 | `mulExact_inf_zero` | `∞ × 0 = NaN` (invalid operation) |
 | `mulExact_inf_nonzero` | `∞ × nonzero = ∞` |
 | `mulExact_finite_sign` | sign of product of two finite values |
+| `isNormalForm` | predicate characterising fixed points of `roundTo`: nan/inf/zero(e=0)/normal-range finites |
+| `roundTo_idempotent` | `isNormalForm fmt d → roundTo fmt rm d = (d, ExcFlags.empty)` ✅ |
 
 ---
 
-### `IEEE754.Theorems.Codec` — §11c
+### `IEEE754.Theorems.Codec` — §11c ✅
 
-Round-trip theorems between `F32` and `DecodedFloat`:
+Round-trip theorems between `F32` and `DecodedFloat` — **all fully proved**:
 
 | Theorem | Statement |
 |---------|-----------|
 | `decode_nan` | `f.isNaN → f.decode = .nan` |
 | `decode_inf` | `f.isInf → f.decode = .inf f.sign` |
-| `decode_isZero` | `f.isZero → f.decode = .finite f.sign 0 0` |
-| `encode_decode_normal` | For normal `f`: `encode f32Fmt (decode f) = f` (has `sorry` in one branch) |
-| `encode_decode_subnormal` | For subnormal `f`: `encode f32Fmt (decode f) = f` (has `sorry`s) |
+| `decode_isZero` | `f.isZero → (f.decode).isZero` |
+| `encode_decode_normal` | For normal `f`: `encode f32Fmt (decode f) = f` |
+| `encode_decode_subnormal` | For subnormal `f`: `encode f32Fmt (decode f) = f` |
 | `encode_nan_isNaN` | `(encode fmt .nan).isNaN` |
 | `encode_inf_isInf` | `(encode fmt (.inf s)).isInf` |
 | `encode_zero_isZero` | `(encode fmt (.finite s 0 0)).isZero` |
 
-Private helper lemmas: `pack_sign_expRaw_mantissa`, `findLeadingBit_range`, `nat_toUInt8_toBitVec_toNat`, `nat_toUInt32_trunc23_toNat`.
+Private helper lemmas proven along the way: `pack_sign_expRaw_mantissa`, `findLeadingBit_range`, `findLeadingBit_le`, `nat_toUInt8_toBitVec_toNat`, `nat_toUInt32_trunc23_toNat`.
 
 ---
 
@@ -370,8 +379,8 @@ Infinity arithmetic (IEEE 754-2019 §6.1):
 | Theorem | Statement |
 |---------|-----------|
 | `fadd_inf_finite` | `a.isInf → b.isFinite → (fadd rm a b).isInf ∧ sign preserved` |
-| `fmul_inf_nonzero` | `a.isInf → b.isFinite → ¬b.isZero → (fmul rm a b).isInf ∧ sign = XOR` (partial) |
-| `fdiv_nonzero_zero` | `a.isFinite → ¬a.isZero → b.isZero → (fdiv rm a b).isInf` (partial) |
+| `fmul_inf_nonzero` | `a.isInf → b.isFinite → ¬b.isZero → (fmul rm a b).isInf ∧ sign = XOR` *(sign cases sorry)* |
+| `fdiv_nonzero_zero` | `a.isFinite → ¬a.isZero → b.isZero → (fdiv rm a b).isInf` *(sign conjunct sorry)* |
 
 ---
 
@@ -398,7 +407,7 @@ Infinity arithmetic (IEEE 754-2019 §6.1):
 |---------|-----------|
 | `flt_irrefl` | `flt a a = false` |
 | `flt_asymm` | `flt a b = true → flt b a = false` |
-| `flt_trans` | `flt a b → flt b c → flt a c` (sorry) |
+| `flt_trans` | `flt a b → flt b c → flt a c` *(sorry)* |
 | `flt_nan_l` / `flt_nan_r` | NaN comparisons return false |
 | `feq_nan_l` / `feq_nan_r` | NaN equalities return false |
 
@@ -408,7 +417,7 @@ Infinity arithmetic (IEEE 754-2019 §6.1):
 |---------|-----------|
 | `addExact_opp_cancel` | `addExact rm f (-f) = (finite sign 0 0, empty)` |
 | `fsub_self_isZero` | `¬f.isNaN → (fsub rm f f).isZero` |
-| `fadd_posZero_r` | `fadd rm f posZero = f` for non-NaN (incomplete) |
+| `fadd_posZero_r` | `fadd rm f posZero = f` for non-NaN *(sorry)* |
 
 **I. FMA: true single rounding (IEEE 754-2019 §5.4.1):**
 
@@ -422,7 +431,6 @@ Infinity arithmetic (IEEE 754-2019 §6.1):
 
 | Theorem | Statement |
 |---------|-----------|
-| `fsqrt_is_single_rounded` | `fsqrt` is a correctly-rounded operation |
 | `fsqrt_nan` | `f.isNaN → (fsqrt rm f).isNaN` |
 | `fsqrt_neg_isNaN` | negative finite → `fsqrt` returns NaN |
 | `fsqrt_negInf_isNaN` | `fsqrt(-∞)` is NaN |
@@ -439,9 +447,9 @@ Infinity arithmetic (IEEE 754-2019 §6.1):
 Exported C-callable functions for hardware co-simulation (Python/ctypes, cocotb, CVDP):
 
 ```lean
-@[export f32_add]   def f32_add (a b : UInt32) (round : UInt8) : UInt32
-@[export f32_mul]   def f32_mul (a b : UInt32) (round : UInt8) : UInt32
-@[export f32_fma]   def f32_fma (a b c : UInt32) (round : UInt8) : UInt32
+@[export f32_add]          def f32_add (a b : UInt32) (round : UInt8) : UInt32
+@[export f32_mul]          def f32_mul (a b : UInt32) (round : UInt8) : UInt32
+@[export f32_fma]          def f32_fma (a b c : UInt32) (round : UInt8) : UInt32
 @[export float32_classify] def classify (a : UInt32) : UInt8
 ```
 
@@ -463,7 +471,8 @@ result = lib.f32_add(0x3F800000, 0x3F800000, 0)  # 1.0 + 1.0 = 2.0
 
 - [Lean 4](https://github.com/leanprover/lean4) (stable toolchain — see `lean-toolchain`)
 - [Lake](https://github.com/leanprover/lake) (bundled with Lean)
-- Mathlib4 (fetched automatically by Lake)
+
+> **No Mathlib dependency.** The only external import is `Std.Tactic.BVDecide`, which ships with Lean's standard library.
 
 ### Build
 
@@ -486,12 +495,16 @@ lake env lean IEEE754/Theorems/Sign.lean
 The `Oracle.lean` file contains `#eval` expressions that run at build time:
 
 ```
-1.0 + 1.0 = 2.0  → 40000000
-2.0 × 2.0 = 4.0  → 40800000
-2.0×3.0+4.0=10.0 → 41200000
-classify(1.0)    = 4 (normal)
-classify(+∞)     = 1 (inf)
-classify(NaN)    = 0 (nan)
+1.0  + 1.0  = 2.0  → 40000000
+1.5  + 1.5  = 3.0  → 40400000
+1.0  × 1.0  = 1.0  → 3F800000
+2.0  × 2.0  = 4.0  → 40800000
+2.0×3.0+4.0 = 10.0 → 41200000
+classify(1.0)       = 4 (normal)
+classify(+0)        = 2 (zero)
+classify(+∞)        = 1 (inf)
+classify(NaN)       = 0 (nan)
+classify(min_sub)   = 3 (subnormal)
 ```
 
 ---
@@ -532,29 +545,35 @@ Rounding mode encoding for the `round` parameter:
 
 ## Proof Status
 
-The following theorems have open `sorry`s and are work-in-progress:
+Open `sorry`s — work in progress:
 
 | Location | Theorem | What's missing |
 |----------|---------|----------------|
-| `Theorems/Codec.lean` | `encode_decode_normal` | Closing the `.normal` case using helper lemmas |
-| `Theorems/Codec.lean` | `encode_decode_subnormal` | Several branches in the subnormal case |
-| `Theorems/Inf.lean` | `fmul_inf_nonzero` | Sign cases for `cases a.sign <;> cases b.sign` |
-| `Theorems/Inf.lean` | `fdiv_nonzero_zero` | Second conjunct (sign of result) |
+| `Theorems/Inf.lean` | `fmul_inf_nonzero` | Sign cases (`cases a.sign <;> cases b.sign`) |
+| `Theorems/Inf.lean` | `fdiv_nonzero_zero` | Second conjunct: sign of the infinite result |
 | `Theorems/Sign.lean` | `flt_trans` | Full transitivity case analysis |
-| `Theorems/Sign.lean` | `fadd_posZero_r` | Identity law for `fadd f posZero` |
-| `Theorems/Sign.lean` | `roundTo_idempotent` | Already-rounded values are stable |
+| `Theorems/Sign.lean` | `fadd_posZero_r` | Identity law `fadd rm f posZero = f` (multiple branches) |
 
-All other theorems in the library are fully proved (using `bv_decide`, `bv_omega`, `native_decide`, `simp`, `omega`, and `grind`).
+Recently closed:
+
+| Location | Theorem | Closed |
+|----------|---------|--------|
+| `Theorems/Codec.lean` | `encode_decode_normal` | ✅ |
+| `Theorems/Codec.lean` | `encode_decode_subnormal` | ✅ |
+| `Theorems/Props.lean` | `roundTo_idempotent` | ✅ proved via `isNormalForm` fixed-point characterisation |
+
+All other theorems are fully proved using `bv_decide`, `bv_omega`, `native_decide`, `simp`, `omega`, and `grind`.
 
 ---
 
 ## Dependencies
 
-| Dependency | Version |
-|------------|---------|
-| Lean 4 | stable toolchain (see `lean-toolchain`) |
+| Dependency | Notes |
+|------------|-------|
+| Lean 4 | Stable toolchain — see `lean-toolchain` |
+| `Std.Tactic.BVDecide` | Ships with Lean's standard library; the **only** external import |
 
-The only external import is `Std.Tactic.BVDecide`, which ships with Lean's standard library — no Mathlib dependency.
+No Mathlib dependency.
 
 ---
 

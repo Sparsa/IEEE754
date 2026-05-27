@@ -124,11 +124,55 @@ theorem fmul_inf_nonzero {rm : RoundMode} {a b : F32}
         simp [roundTo]
         simp [encode]
         simp [pack]
-        cases a.sign <;> cases b.sign <;>
-        ·{ sorry }
+
+
       }
     }
-    · sorry
+    ·{
+      constructor
+      ·{
+        simp [fmul]
+        simp[fmulEx]
+        simp [mulExact]
+        split
+        ·{
+          rename_i heq
+          simp [decode] at heq
+          simp [a_notn] at heq
+          simp [ha] at heq
+        }
+        ·{
+          rename_i heq_b heq_a
+          simp [decode] at heq_b
+          simp [b_notn] at heq_b
+          simp [b_notinf] at heq_b
+          simp [hnz] at heq_b
+        }
+        ·{
+          rename_i heq_a heq_b
+          simp [decode] at heq_b
+          simp [b_notn] at heq_b
+          simp [b_notinf] at heq_b
+          simp [hnz] at heq_b
+          simp [isFinite] at hb
+          contradiction
+          by_cases b.isNormal
+          ·{
+            rename_i bn
+            simp [bn] at heq_b
+
+          }
+          simp [hb] at heq_b
+          simp [ha] at heq_a
+          simp [roundTo]
+          simp [encode]
+          simp [qNaN]
+
+
+
+        }
+      }
+    }
 
 /-- Nonzero finite / 0 = ∞ (division by zero; §7.3). -/
 theorem fdiv_nonzero_zero {rm : RoundMode} {a b : F32}

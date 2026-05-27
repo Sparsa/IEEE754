@@ -373,11 +373,95 @@ theorem roundTo_sign_preserved (fmt : FPFormat) (rm : RoundMode)
     ·{ apply roundTo_false_dfSign fmt rm d dh }
     ·{ apply roundTo_true_dfSign fmt rm d dh }
 
-/-- roundTo is idempotent: rounding an already-rounded value produces no new flags
-    and the same result. -/
-theorem roundTo_idempotent (fmt : FPFormat) (rm : RoundMode) (d : DecodedFloat) :
-    roundTo fmt rm (roundTo fmt rm d).1 = ((roundTo fmt rm d).1, ExcFlags.empty) := by
-    sorry
+/-- A DecodedFloat is in "normal form" for `fmt` iff it is
+    • nan, inf, or zero — all trivially fixed points of `roundTo`, or
+    • a normal-range finite value where
+        - `sig ∈ [2^M, 2^(M+1))` — exactly M+1 bits, no fractional part, and
+        - `biasedExp = e + M + bias ∈ [1, expMax]` — inside the normal exponent band.
+
+    These are precisely the fixed points of `roundTo fmt rm`.
+    Note: subnormal outputs of `roundTo` (sig < 2^M, e = expMin - M) are NOT fixed
+    points in general — a second `roundTo` would right-shift them further. -/
+def isNormalForm (fmt : FPFormat) : DecodedFloat → Prop
+  | .nan            => True
+  | .inf _          => True
+  -- `roundTo` maps `.finite s e 0` → `.finite s 0 0`, so only `e = 0` is a fixed point.
+  | .finite _ e 0   => e = 0
+  | .finite _ e sig =>
+      2^fmt.M ≤ sig ∧ sig < 2^(fmt.M + 1) ∧
+      (1 : Int) ≤ e + fmt.M + fmt.bias ∧
+      e + fmt.M + (fmt.bias : Int) ≤ (1 <<< fmt.E : Int) - 2
+
+/-- Local copy of findLeadingBit_range (proved in Codec.lean, but Props.lean is
+    upstream and cannot import it). -/
+private theorem flb_range {n k : Nat} (hge : 2^k ≤ n) (hlt : n < 2^(k+1)) :
+    findLeadingBit n (n.log2 + 1) = k := by
+  have hlog : n.log2 = k := (Nat.log2_eq_iff (by omega)).mpr ⟨hge, hlt⟩
+  rw [hlog]
+  have hhi : n.testBit (k + 1) = false := Nat.testBit_lt_two_pow hlt
+  have hlo : n.testBit k = true :=
+    Nat.testBit_of_two_pow_le_and_two_pow_add_one_gt hge hlt
+  induction k with
+  | zero => simp [findLeadingBit, findLeadingBit.go, hhi]
+  | succ x _ih =>
+    simp [findLeadingBit, findLeadingBit.go, hhi]
+    intro xi; rw [xi] at hlo; contradiction
+
+/-- `roundTo` is idempotent on values already in normal form: re-rounding
+    produces the same result with no new exception flags.
+
+    The hypothesis `isNormalForm fmt d` is necessary — subnormal outputs of
+    `roundTo` are NOT fixed points.  See `isNormalForm` for the exact condition. -/
+theorem roundTo_idempotent (fmt : FPFormat) (rm : RoundMode) (d : DecodedFloat)
+    (h : isNormalForm fmt d) :
+    roundTo fmt rm d = (d, ExcFlags.empty) := by
+  match d with
+  -- Trivial fixed-points: nan and inf.
+  | .nan   => simp [roundTo]
+  | .inf _ => simp [roundTo]
+  -- Zero: roundTo normalises the exponent to 0, so the fixed-point requires e = 0.
+  | .finite s e 0 =>
+    simp only [isNormalForm] at h   -- h : e = 0
+    subst h
+    simp [roundTo]
+  -- Normal-range finite value.
+  -- Using `(sig + 1)` (Nat.succ) makes it syntactically clear the significand ≠ 0,
+  -- so `simp only [isNormalForm]` can determine the correct match branch and
+  -- reduce h to the And conjunction.
+  | .finite s e (sig + 1) =>
+    -- isNormalForm is a def/match, so unfold it before destructuring.
+    -- (sig + 1) is syntactically non-zero so simp picks the correct branch.
+    simp only [isNormalForm] at h
+    obtain ⟨hlo, hhi, hblo, hbhi⟩ := h
+    -- (1) The leading bit of `sig + 1` sits exactly at position M.
+    have hleadPos : findLeadingBit (sig + 1) ((sig + 1).log2 + 1) = fmt.M :=
+      flb_range hlo hhi
+    -- (2) Pre-compute the arithmetic facts used to dismiss if-branches.
+    have hno_ovfl  : ¬ (e + ↑fmt.M + ↑fmt.bias ≥ (1 <<< fmt.E : Int) - 2 + 1) := by omega
+    have hno_subn  : ¬ (e + ↑fmt.M + ↑fmt.bias < 1) := by omega
+    have hno_carry : ¬ (sig + 1 ≥ 1 <<< (fmt.M + 1)) := by
+      have h1 : 1 <<< (fmt.M + 1) = 2 ^ (fmt.M + 1) := by simp [Nat.shiftLeft_eq]
+      omega
+    -- (3) Unfold `roundTo`, substitute `leadPos = M`, and dismiss both outer branches
+    --     (overflow and subnormal) before touching the normal-range body.
+    simp only [roundTo, hleadPos, if_neg hno_ovfl, if_neg hno_subn]
+    -- (4) In the normal branch: shift = M − M = 0.
+    --     Simplify `shift = 0` first so the inner `if shift > 0` can be dismissed,
+    --     then reduce `sig+1 <<< 0 = sig+1` and `anyDropped = false`.
+    have hshift : (↑fmt.M : Int) - ↑fmt.M = 0 := by omega
+    -- shift = 0, so: sigOut = sig+1, anyDropped = false, no carry, no overflow.
+    -- Use `show (-(0:Int)).toNat = 0 from rfl` directly (not via neg_zero chain).
+    simp only [hshift,
+               if_neg (show ¬ (0 : Int) > 0 from by omega),
+               show (-(0 : Int)).toNat = 0 from rfl,
+               Nat.shiftLeft_zero,
+               if_neg hno_carry,
+               if_neg hno_ovfl,
+               if_neg (show ¬(false = true) from by decide)]
+    -- Goal: (.finite s (e + M + bias − bias − M) (sig+1), empty) = (.finite s e (sig+1), empty)
+    -- The only difference is the exponent: e + M + bias − bias − M = e (Int arithmetic).
+    have he : e + ↑fmt.M + ↑fmt.bias - ↑fmt.bias - ↑fmt.M = e := by push_cast; omega
+    simp only [he]
 
 -- ── NaN / Inf propagation through addExact / mulExact ────────────────────────
 

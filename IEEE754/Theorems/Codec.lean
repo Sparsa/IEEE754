@@ -198,17 +198,27 @@ theorem pack_sign_expRaw_mantissa (f : F32) :
 
 
 /-- findLeadingBit of any n in [2^k, 2^(k+1)) equals k. -/
-private theorem findLeadingBit_range (n k : Nat) (hge : 2^k ≤ n) (hlt : n < 2^(k+1)) :
+private theorem findLeadingBit_range {n k : Nat} (hge : 2^k ≤ n) (hlt : n < 2^(k+1)) :
     findLeadingBit n (n.log2 + 1) = k := by
   have hlog : n.log2 = k := (Nat.log2_eq_iff (by omega)).mpr ⟨hge, hlt⟩
   rw [hlog]
-  simp only [findLeadingBit]
   have hhi : n.testBit (k + 1) = false := Nat.testBit_lt_two_pow hlt
   have hlo : n.testBit k = true  :=
     Nat.testBit_of_two_pow_le_and_two_pow_add_one_gt hge hlt
-  simp [findLeadingBit.go]
-  rw [hhi]
-  simp
+  induction k with
+  | zero =>
+    simp [findLeadingBit]
+    simp [findLeadingBit.go]
+    simp_all
+  | succ x ih =>
+    simp [findLeadingBit]
+    simp [findLeadingBit.go]
+    simp [hhi]
+    intro xi
+    rw [xi] at hlo
+    contradiction
+
+
 
 
 
@@ -242,104 +252,166 @@ theorem encode_decode_normal {f : F32} (h : f.isNormal) :
   have hMantLt  : f.mantissa.toNat < 2^23 := f.mantissa.isLt
   have exp_23 : 8388608 = 2^ 23 := by decide
   have exp_24 : 16777216 = 2^ 24 := by decide
-
-
-  -- Dispatch the non-normal cases by contradiction
-  cases hf : classify f
-  ·{ simp [classify] at hf; simp [hNotInf] at hf; simp [h] at hf; simp [hNotsub] at hf; simp_all
-  }
-  ·{ simp [classify] at hf; simp [hNotZero] at hf; simp [h] at hf; simp_all
+  simp [decode]
+  simp [hNotNaN,hNotInf,hNotZero,h]
+  simp [encode]
+  split
+  ·{
+    contradiction
   }
   ·{
-    simp[encode]
-    induction ih: f.decode with
-    | nan  =>
-      simp
-      simp [decode] at ih
-      simp [hNotNaN,hNotInf,hNotZero] at ih
-    | inf sign =>
-      simp
-      simp [decode] at ih
-      simp [hNotNaN,hNotInf,hNotZero] at ih
-    | finite sign exp sig =>
-      simp [decode] at ih
-      simp [hNotNaN,hNotInf,hNotZero,h] at ih
-      obtain ⟨hsign, hexp, hsig⟩ := ih
-      -- Reduce the match — sig ≠ 0 for normal floats
-      subst hsign
+    contradiction
+  }
+  ·{
+    simp_all
+    rename_i d s exp mm
+    have ⟨ sign, base,sig⟩ := mm
+    rw [← sign]
+    simp [significand] at sig
+    simp [h] at sig
+    have sig_g0 : 8388608 ||| f.mantissa.toNat % 16777216 ≠ 0 := by grind
+    contradiction
+  }
+  ·{
+    simp_all
+    rename_i heqq
+    have ⟨heqql,heqqm,heqqr ⟩ := heqq
+    simp_all
+    split
+    ·{
+      have allones_23 : 8388607#23 = allOnes 23 := by decide
+      -- rw [allones_23]
+      simp [← heqqr]
+      simp [significand]
+      simp [h]
+      have mant:  f.mantissa.toNat % 16777216 = f.mantissa.toNat := by omega
+      rw [mant]
+      have set: (setWidth 23 (UInt32.ofNat f.mantissa.toNat).toBitVec )= f.mantissa := by
+        apply BitVec.eq_of_toNat_eq
+        simp [ UInt32.ofNat]
+      rw[set]
+      rw [allones_23]
+      rw [BitVec.and_allOnes]
+      rw [← heqql]
+      simp [expIsZero] at hExpZero
+      rename_i sig2 x2 ee2
+      have hg3 : 2^(sig2.log2) ≤ sig2 := by refine Nat.log2_self_le x2
+      have hg4 : sig2 < 2^(sig2.log2 + 1) := by  exact Nat.lt_log2_self
+      have ss2 : findLeadingBit sig2 (sig2.log2+ 1) = sig2.log2 := by
+        exact findLeadingBit_range hg3 hg4
+      rw [ss2] at ee2
+      exfalso
+      have hsigLo : 2^23 ≤ sig2 := by
+        rw [← heqqr]
+        simp [F32.significand, F32.mantissa] at hMantLt ⊢
+        simp [h]
 
-      have hsigNZ : sig ≠ 0 := by
-        rw [← hsig]
-        simp [F32.significand] at hNotZero hNotsub ⊢
-        -- normal float has nonzero significand
-        intro lh
-        simp [h] at lh
-        grind
-      simp
-      -- Now show the middle branch is taken (not subnormal, not overflow)
-
-      have hflb : findLeadingBit sig (sig.log2 + 1) ≤  sig.log2 := by exact findLeadingBit_le sig
-      simp [F32.expRaw, F32.expIsZero] at hExpZero
-
-      have : f.expRaw ≠ 0#8 := by
-        intro heq
-        apply hExpZero
-        simp [expRaw] at heq
-        have := f.expRaw.isLt  -- expRaw.toNat < 256
-        omega
-
-      have hne : f.expRaw.toNat ≠ 0 := by
-          intro h
-          apply this
-          exact BitVec.eq_of_toNat_eq (by simp [h])
-
-      have hexpNZ : f.expRaw.toNat ≥ 1 := by omega
-
-      have hflb' : (findLeadingBit sig (sig.log2 + 1) : Int) ≥ 0 := by exact
-
-      have h_flb_23 : 23 ≤ findLeadingBit sig (1 + sig.log2) := by
-        rw [Nat.add_comm]
-        rw [← hsig]
-        simp[findLeadingBit]
-        simp [findLeadingBit.go]
-        simp [Nat.testBit]
-        split
-        ·{
-          simp_all
-          rw [hsig] at hMantLt
-        }
-        sorry
-
-      have h_goal_simped : (↑f.expRaw.toNat - 23 + ↑(findLeadingBit sig (1 + sig.log2)) > 0) := by omega
-
-
-      have hhi : ¬ (255 ≤ exp + ↑(findLeadingBit sig (sig.log2 + 1)) + 127) := by
-        rw [← hexp]
-        simp [F32.expRaw, F32.expIsMax] at hExpMax
-        simp_all
-        have hexpLt : f.expRaw.toNat ≤ 254 := by
-          have hexpl256: f.expRaw.toNat < 256 := f.expRaw.isLt
-          have hxpN255 : f.expRaw.toNat ≠ 255 := by
-            intro heq
-            simp [F32.expRaw] at heq
-            bv_omega
-          bv_omega
-        have hlt : sig < 2^24 := by
-          have := f.significand.isLt
-          rw [← hsig]
-          exact this
-        have hlog : sig.log2 ≤ 23 := by
-            have h := Nat.log2_lt (by omega) |>.mpr hlt
+        have hhh: (BitVec.toNat f) % 8388608 % 16777216 = BitVec.toNat f % 8388608 := by omega
+        simp [hhh]
+        exact Nat.left_le_or
+      have hlog23 : sig2.log2 = 23 := by
+        apply Nat.le_antisymm
+        · have : sig2 < 2^24 := by rw [← heqqr]; exact f.significand.isLt
+          have := Nat.log2_lt (by omega) |>.mpr this
+          omega
+        ·
+            refine (Nat.le_log2 ?_).mpr hsigLo
             omega
-        have hflb2 : (findLeadingBit sig (sig.log2 + 1) : Int) ≤ 23 := by
-          have mid: findLeadingBit sig (sig.log2 + 1) ≤ 23 := by omega
-          exact_mod_cast mid
-        simp_all
+      have hexpNZ : f.expRaw.toNat ≥ 1 := by
+        have : f.expRaw.toNat ≠ 0 := by
+          intro heq
+          exact hExpZero (BitVec.eq_of_toNat_eq (by simp [heq]))
         omega
-    }
-  ·{ simp [classify] at hf; simp [hNotZero] at hf; simp [h] at hf; simp [hNotsub] at hf }
-  ·{ simp [classify] at hf; simp [hNotZero] at hf; simp [hNotsub] at hf; simp [h] at hf }
+      rw [hlog23, ← heqqm] at ee2
 
+      omega  -- ee2 becomes expRaw ≤ 0 but expRaw ≥ 1
+    }
+    ·{
+      rename_i sig2 s hh
+      have hg3 : 2^(sig2.log2) ≤ sig2 := by refine Nat.log2_self_le s
+      have hg4 : sig2 < 2^(sig2.log2 + 1) := by  exact Nat.lt_log2_self
+      have ss2 : findLeadingBit sig2 (sig2.log2+ 1) = sig2.log2 := by
+        exact findLeadingBit_range hg3 hg4
+      rw [ss2]
+      rw [ss2] at hh
+      simp at hh
+      have set: (setWidth 23 (UInt32.ofNat sig2).toBitVec )= sig2 := by
+        apply BitVec.eq_of_toNat_eq
+        simp [ UInt32.ofNat]
+      rw [set]
+      have allones_23 : 8388607#23 = allOnes 23 := by decide
+      --rw [allones_23]
+      --simp [BitVec.and_allOnes]
+      -- sig2.log2 = 23 since significand is a normal 24-bit value with leading bit
+      have hsigLo : 2^23 ≤ sig2 := by
+        rw [← heqqr]
+        simp [F32.significand, F32.mantissa] at hMantLt ⊢
+        simp [h]
+
+        have hhh: (BitVec.toNat f) % 8388608 % 16777216 = BitVec.toNat f % 8388608 := by omega
+        simp [hhh]
+        exact Nat.left_le_or
+      have hsigHi : sig2 < 2^24 := by rw [← heqqr]; exact f.significand.isLt
+      have hlog23 : sig2.log2 = 23 := by
+        apply Nat.le_antisymm
+        · have : sig2 < 2^24 := by rw [← heqqr]; exact f.significand.isLt
+          have := Nat.log2_lt (by omega) |>.mpr this
+          omega
+        ·
+            refine (Nat.le_log2 ?_).mpr hsigLo
+            omega
+
+      -- Rule out overflow branch
+      have hExpMaxN : f.expRaw.toNat ≤ 254 := by
+        have : f.expRaw.toNat ≠ 255 := by
+          intro heq
+          simp [F32.expIsMax, F32.expRaw] at hExpMax
+          have h255: 255  = (255#8).toNat := by decide
+          rw [h255] at heq
+          have ff : f.expRaw = 255#8 := by grind
+          exact hExpMax ff
+        have := f.expRaw.isLt; omega
+      rename_i dd ss ee
+      have hhi : ¬(255 ≤ ee + ↑sig2.log2 + 127) := by
+        rw [hlog23, ← heqqm]; omega
+      simp only [hhi, ↓reduceIte]
+      -- Goal: pack s✝ (UInt8.ofNat (e✝ + sig2.log2 + 127).toNat).toBitVec (sig2 &&& 8388607#23) = f
+
+      -- Exponent round-trips: e✝ + 23 + 127 = expRaw
+      have hexpEnc : (UInt8.ofNat (ee + ↑sig2.log2 + 127).toNat).toBitVec = f.expRaw := by
+        apply BitVec.eq_of_toNat_eq
+        simp [UInt8.ofNat]
+        rw [← heqqm]
+        simp [hlog23]
+        omega
+      -- Mantissa: sig2 &&& 8388607#23 = f.mantissa
+      have hmantEnc : (↑sig2 : BitVec 23) &&& 8388607#23 = f.mantissa := by
+
+       -- apply BitVec.eq_of_toNat_eq
+
+        -- simp [BitVec.toNat_and]
+        rw [← heqqr]
+        simp [significand]
+        simp [h]
+        have fman_23 : f.mantissa.toNat % 16777216 = f.mantissa.toNat := by omega
+        simp [fman_23]
+        rw [allones_23]
+        rw [BitVec.and_allOnes]
+
+      rw [hexpEnc, hmantEnc, ← heqql]
+      apply pack_sign_expRaw_mantissa
+
+    }
+  }
+
+example (n m : Nat) : (n ||| m % n)  = n+ m % n := by apply?
+example (n k: Nat) : n % 2^k = n &&& (2^k -1) := by exact?
+example (n k : Nat) (h: 2^k ≤ n ) : k ≤ n.log2 := by apply?
+example (n k : Nat) : n ≤ n ||| k % n := by exact?
+example {n k : Nat} (h:k < n) : k%n = k := by exact?
+example {n: Nat} : 2^(n.log2) ≤ n := by apply?
+example {n:Nat} : n < 2^(n.log2+1) := by apply?
+example {k n : Nat} (Hn : n < 2^k) :  n % 2^k ||| 2^k  =  n%2^k  + 2^k := by apply?
 -- ── findLeadingBit auxiliary lemmas ──────────────────────────────────────────
 
 theorem BitVec.toNat_log2_le (a : BitVec n) : a.toNat.log2 ≤ n := by

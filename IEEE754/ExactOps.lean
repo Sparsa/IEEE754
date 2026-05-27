@@ -93,7 +93,7 @@ def mulExact (a b : DecodedFloat) : DecodedFloat × ExcFlags :=
     We shift the dividend left by (M+3) guard bits before integer division
     so the quotient has enough fractional bits for correct rounding.
     `M` is the mantissa width of the *output* format (passed by roundTo). -/
-private def divExactWith (extraBits : Nat) (a b : DecodedFloat) : DecodedFloat × ExcFlags :=
+def divExactWith (extraBits : Nat) (a b : DecodedFloat) : DecodedFloat × ExcFlags :=
   match a, b with
   | .nan, _ | _, .nan => (.nan, ExcFlags.empty)
   -- Inf / Inf = NaN (invalid operation §7.2)

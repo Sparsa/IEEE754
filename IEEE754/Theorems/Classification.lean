@@ -47,24 +47,24 @@ theorem contrapositive_example (h : p → q) : ¬q → ¬p := by
 -- Auxiliary lemmas used across all five proofs
 -- ─────────────────────────────────────────────────────────────────────────────
 
-private theorem expZero_ne_expMax (f : F32) :
+theorem expZero_ne_expMax (f : F32) :
     ¬(f.expIsZero = true ∧ f.expIsMax = true) := by
   simp [expIsZero, expIsMax]
   intro h; simp [h]
 
-private theorem isZero_false_of_isSubnormal (f : F32) (h : f.isSubnormal = true) :
+theorem isZero_false_of_isSubnormal (f : F32) (h : f.isSubnormal = true) :
     f.isZero = false := by
   simp [isZero, isSubnormal] at *
   obtain ⟨hexp, hmant⟩ := h
   simp [hexp, hmant]
 
-private theorem isZero_false_of_isNormal (f : F32) (h : f.isNormal = true) :
+theorem isZero_false_of_isNormal (f : F32) (h : f.isNormal = true) :
     f.isZero = false := by
   simp [isZero, isNormal, expIsZero, expIsMax] at *
   obtain ⟨hne0, _⟩ := h
   cases hm : f.mantIsZero <;> simp [hne0]
 
-private theorem isZero_false_of_isInf (f : F32) (h : f.isInf = true) :
+theorem isZero_false_of_isInf (f : F32) (h : f.isInf = true) :
     f.isZero = false := by
   simp [isZero, isInf, expIsZero, expIsMax] at *
   obtain ⟨left, right⟩ := h
@@ -72,7 +72,7 @@ private theorem isZero_false_of_isInf (f : F32) (h : f.isInf = true) :
   rw [left] at hzero
   contradiction
 
-private theorem isZero_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+theorem isZero_false_of_isNaN (f : F32) (h : f.isNaN = true) :
     f.isZero = false := by
   simp [isZero, isNaN, expIsZero, expIsMax] at *
   obtain ⟨hmax, _⟩ := h
@@ -87,7 +87,7 @@ theorem isSubnormal_false_of_isNormal (f : F32) (h : f.isNormal = true) :
   obtain ⟨expraw_nz, exp_nomax⟩ := h
   contradiction
 
-private theorem isSubnormal_false_of_isInf (f : F32) (h : f.isInf = true) :
+theorem isSubnormal_false_of_isInf (f : F32) (h : f.isInf = true) :
     f.isSubnormal = false := by
   simp [isSubnormal, isInf, expIsZero, expIsMax] at *
   obtain ⟨hmax, mantissa_max⟩ := h
@@ -95,7 +95,7 @@ private theorem isSubnormal_false_of_isInf (f : F32) (h : f.isInf = true) :
   rw [hmax] at hzero
   contradiction
 
-private theorem isSubnormal_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+theorem isSubnormal_false_of_isNaN (f : F32) (h : f.isNaN = true) :
     f.isSubnormal = false := by
   simp [isSubnormal, isNaN, expIsZero, expIsMax] at *
   obtain ⟨hmax, _⟩ := h
@@ -103,26 +103,26 @@ private theorem isSubnormal_false_of_isNaN (f : F32) (h : f.isNaN = true) :
   rw [hmax] at hzero
   contradiction
 
-private theorem isNormal_false_of_isInf (f : F32) (h : f.isInf = true) :
+theorem isNormal_false_of_isInf (f : F32) (h : f.isInf = true) :
     f.isNormal = false := by
   simp [isNormal, isInf, expIsMax] at *
   intros exp_zero
   exact h.1
 
-private theorem isNormal_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+theorem isNormal_false_of_isNaN (f : F32) (h : f.isNaN = true) :
     f.isNormal = false := by
   simp [isNormal, isNaN, expIsMax] at *
   intros
   exact h.1
 
-private theorem isInf_false_of_isNaN (f : F32) (h : f.isNaN = true) :
+theorem isInf_false_of_isNaN (f : F32) (h : f.isNaN = true) :
     f.isInf = false := by
   simp [isInf, isNaN, mantIsZero] at *
   intros
   obtain ⟨ _, mant_nonzero⟩ := h
   exact mant_nonzero
 
-private theorem isInf_false_of_isZero (f : F32) (h : f.isZero = true) :
+theorem isInf_false_of_isZero (f : F32) (h : f.isZero = true) :
   f.isInf = false := by
   simp [isInf, isZero ] at *
   intros h
@@ -133,48 +133,48 @@ private theorem isInf_false_of_isZero (f : F32) (h : f.isZero = true) :
   rw [right] at h
   contradiction
 
-private theorem isInf_false_of_isFinite (f:F32) (h:f.isFinite = true) : f.isInf = false := by
+theorem isInf_false_of_isFinite (f:F32) (h:f.isFinite = true) : f.isInf = false := by
   simp [isInf, isFinite, expIsMax] at *
   intro h1
   rw [h1] at h
   contradiction
 
-private theorem isInf_false_of_isNormal (f : F32) (h : f.isNormal = true) :
+theorem isInf_false_of_isNormal (f : F32) (h : f.isNormal = true) :
     f.isInf = false := by
   simp [isInf,  mantIsZero,isNormal] at *
   have ⟨exp_nz,exp_max⟩ := h
   intros h1
   simp_all
 
-private theorem isInf_false_of_isSubnormal (f:F32) (h : f.isSubnormal = true) :
+theorem isInf_false_of_isSubnormal (f:F32) (h : f.isSubnormal = true) :
   f.isInf = false := by
   simp [isInf,mantIsZero,isSubnormal] at *
   have ⟨hl,hr⟩ := h
   intros haa
   exact hr
 
-private theorem isNormal_false_of_isSubnormal (f:F32) (h: f.isSubnormal = true) :
+theorem isNormal_false_of_isSubnormal (f:F32) (h: f.isSubnormal = true) :
   f.isNormal = false := by
   simp [isNormal, isSubnormal] at *
   intros hh
   have ⟨hl,hr⟩ := h
   simp_all
 
-private theorem isNaN_false_of_isInf (f:F32) (h:f.isInf = true) :
+theorem isNaN_false_of_isInf (f:F32) (h:f.isInf = true) :
   f.isNaN = false := by
   simp [isNaN,isInf] at *
   obtain ⟨expMax,mantZ⟩ := h
   intros h1
   exact mantZ
 
-private theorem isNaN_false_of_isZero (f:F32) (h:f.isZero = true) :
+theorem isNaN_false_of_isZero (f:F32) (h:f.isZero = true) :
   f.isNaN = false := by
   simp [isNaN,isZero] at *
   have ⟨expZero,mantZero⟩ := h
   intros h1
   exact mantZero
 
-private theorem isNaN_false_of_isSubnormal (f:F32) (h:f.isSubnormal = true) :
+theorem isNaN_false_of_isSubnormal (f:F32) (h:f.isSubnormal = true) :
   f.isNaN = false := by
   simp [isNaN]
   simp [isSubnormal] at h
@@ -185,7 +185,7 @@ private theorem isNaN_false_of_isSubnormal (f:F32) (h:f.isSubnormal = true) :
   rw [expz] at h2
   contradiction
 
-private theorem isNaN_false_of_isNormal (f:F32) (h: f.isNormal = true):
+theorem isNaN_false_of_isNormal (f:F32) (h: f.isNormal = true):
   f.isNaN = false := by
   simp [isNaN]
   simp [isNormal] at h
@@ -193,7 +193,7 @@ private theorem isNaN_false_of_isNormal (f:F32) (h: f.isNormal = true):
   intro hh
   simp_all
 
-private theorem isNaN_false_of_isFinite (f:F32) (h: f.isFinite = true) :
+theorem isNaN_false_of_isFinite (f:F32) (h: f.isFinite = true) :
   f.isNaN = false := by
   simp [isNaN, isFinite] at *
   intro h1

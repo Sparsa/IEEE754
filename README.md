@@ -526,7 +526,8 @@ lake build IEEE754Modular
 lake build
 
 # Check a single file
-lake env lean IEEE754/Theorems/Sign.lean
+lake env lean IEEE754/Theorems/F32/Sign.lean
+lake env lean IEEE754/Theorems/F64/Sign.lean
 ```
 
 ### Run Oracle sanity checks
@@ -534,23 +535,35 @@ lake env lean IEEE754/Theorems/Sign.lean
 The `Oracle.lean` file contains `#eval` expressions that run at build time:
 
 ```
-1.0  + 1.0  = 2.0  → 40000000
-1.5  + 1.5  = 3.0  → 40400000
-1.0  × 1.0  = 1.0  → 3F800000
-2.0  × 2.0  = 4.0  → 40800000
-2.0×3.0+4.0 = 10.0 → 41200000
-classify(1.0)       = 4 (normal)
-classify(+0)        = 2 (zero)
-classify(+∞)        = 1 (inf)
-classify(NaN)       = 0 (nan)
-classify(min_sub)   = 3 (subnormal)
+F32:
+  1.0  + 1.0  = 2.0  → 40000000
+  1.5  + 1.5  = 3.0  → 40400000
+  1.0  × 1.0  = 1.0  → 3f800000
+  2.0  × 2.0  = 4.0  → 40800000
+  2.0×3.0+4.0 = 10.0 → 41200000
+  classify(1.0)       = 4 (normal)
+  classify(+0)        = 2 (zero)
+  classify(+∞)        = 1 (inf)
+  classify(NaN)       = 0 (nan)
+  classify(min_sub)   = 3 (subnormal)
+
+F64:
+  1.0  + 1.0  = 2.0  → 4000000000000000
+  1.5  + 1.5  = 3.0  → 4008000000000000
+  2.0  × 2.0  = 4.0  → 4010000000000000
+  2.0×3.0+4.0 = 10.0 → 4024000000000000
+  classify(1.0)       = 4 (normal)
+  classify(+0)        = 2 (zero)
+  classify(+∞)        = 1 (inf)
+  classify(NaN)       = 0 (nan)
+  classify(min_sub)   = 3 (subnormal)
 ```
 
 ---
 
 ## Hardware Oracle Interface
 
-The `F32.Oracle` namespace exposes four functions via Lean's `@[export]` attribute. After building the shared library, use them from Python like:
+The `F32.Oracle` and `F64.Oracle` namespaces expose C-callable functions via Lean's `@[export]` attribute. After building the shared library, use them from Python like:
 
 ```python
 import ctypes, struct
@@ -588,18 +601,23 @@ Open `sorry`s — work in progress:
 
 | Location | Theorem | What's missing |
 |----------|---------|----------------|
-| `Theorems/Sign.lean` | `flt_trans` | Full transitivity case analysis |
-| `Theorems/Sign.lean` | `fadd_posZero_r` | Identity law `fadd rm f posZero = f` (multiple branches) |
+| `Theorems/F32/Sign.lean` | `flt_trans` | Full transitivity case analysis |
+| `Theorems/F32/Sign.lean` | `fadd_posZero_r` | Identity law `fadd rm f posZero = f` (multiple branches) |
+| `Theorems/F64/Inf.lean` | `fdiv_nonzero_zero` | Case analysis over F64 classification (mirrors F32 proof) |
+| `Theorems/F64/Sign.lean` | `flt_trans` | Full transitivity case analysis |
+| `Theorems/F64/Sign.lean` | `fadd_posZero_r` | Identity law `fadd rm f posZero = f` (multiple branches) |
+| `Theorems/F64/Sign.lean` | `fma_ne_mul_then_add` | Requires finding specific F64 bit patterns |
 
 Recently closed:
 
 | Location | Theorem | Closed |
 |----------|---------|--------|
-| `Theorems/Codec.lean` | `encode_decode_normal` | ✅ |
-| `Theorems/Codec.lean` | `encode_decode_subnormal` | ✅ |
-| `Theorems/Props.lean` | `roundTo_idempotent` | ✅ proved via `isNormalForm` fixed-point characterisation |
-| `Theorems/Inf.lean` | `fmul_inf_nonzero` | ✅ sign = XOR via `mulExact_inf_nonzero` + pack case-split |
-| `Theorems/Inf.lean` | `fdiv_nonzero_zero` | ✅ both conjuncts; `mantIsZero` via `significand_nonzero_of_not_isZero` |
+| `Theorems/F32/Codec.lean` | `encode_decode_normal` | ✅ |
+| `Theorems/F32/Codec.lean` | `encode_decode_subnormal` | ✅ |
+| `Theorems/F32/Props.lean` | `roundTo_idempotent` | ✅ proved via `isNormalForm` fixed-point characterisation |
+| `Theorems/F32/Inf.lean` | `fmul_inf_nonzero` | ✅ sign = XOR via `mulExact_inf_nonzero` + pack case-split |
+| `Theorems/F32/Inf.lean` | `fdiv_nonzero_zero` | ✅ both conjuncts; `mantIsZero` via `significand_nonzero_of_not_isZero` |
+| `Theorems/F64/` | entire F64 theorem chain | ✅ Classification, Codec, NaN, Inf (partial), Sign (partial) |
 
 All other theorems are fully proved using `bv_decide`, `bv_omega`, `native_decide`, `simp`, `omega`, and `grind`.
 
@@ -620,23 +638,35 @@ No Mathlib dependency.
 
 ```
 IEEE754/
-├── README.md                  ← this file
+├── .gitignore
+├── README.md
 ├── lakefile.toml              ← Lake build config (two lib targets)
+├── lake-manifest.json         ← pinned dependency versions
 ├── lean-toolchain             ← pinned Lean version
-├── IEEE754.lean               ← monolithic original (3568 lines, §1–§12)
+├── LICENSE
+├── IEEE754.lean               ← monolithic original (§1–§12, untouched)
 ├── IEEE754Modular.lean        ← modular entry point
 └── IEEE754/
-    ├── Basic.lean
-    ├── ExactOps.lean
-    ├── F32/Defs.lean
-    ├── F64/Defs.lean
-    ├── Conversions.lean
-    ├── Oracle.lean
+    ├── Basic.lean             ← §1–3.5  types, flags, FPFormat
+    ├── ExactOps.lean          ← §4–5    exact arithmetic + roundTo
+    ├── Conversions.lean       ← §10     F32↔F64, F32↔Int32
+    ├── Oracle.lean            ← §12     @[export] C-callable functions (F32 + F64)
+    ├── F32/
+    │   └── Defs.lean          ← §6–7    F32 fields, codec, arithmetic ops
+    ├── F64/
+    │   └── Defs.lean          ← §8–9    F64 fields, codec, arithmetic ops
     └── Theorems/
-        ├── Classification.lean
-        ├── Props.lean
-        ├── Codec.lean
-        ├── NaN.lean
-        ├── Inf.lean
-        └── Sign.lean
+        ├── F32/
+        │   ├── Classification.lean  ← §11a  exclusivity lemmas, F32Class
+        │   ├── Props.lean           ← §11b  algebraic properties, roundTo lemmas
+        │   ├── Codec.lean           ← §11c  encode/decode round-trip ✅
+        │   ├── NaN.lean             ← §11B–C NaN propagation + invalid-op
+        │   ├── Inf.lean             ← §11D  Inf arithmetic ✅
+        │   └── Sign.lean            ← §11E–J sign rules, ordering, FMA, sqrt
+        └── F64/
+            ├── Classification.lean  ← §11a  exclusivity lemmas, F64Class ✅
+            ├── Codec.lean           ← §11c  encode/decode round-trip ✅
+            ├── NaN.lean             ← §11B–C NaN propagation + invalid-op ✅
+            ├── Inf.lean             ← §11D  Inf arithmetic (fdiv sorry)
+            └── Sign.lean            ← §11E–J sign rules, ordering, FMA, sqrt
 ```

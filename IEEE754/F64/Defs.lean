@@ -56,11 +56,47 @@ def significand (f : F64) : BitVec 53 :=
   let lead : BitVec 53 := if f.isNormal then 1 <<< 52 else 0
   lead ||| f.mantissa.zeroExtend 53
 
-def posZero : F64 := F64.pack false 0 0
-def negZero : F64 := F64.pack true  0 0
-def posInf  : F64 := F64.pack false (BitVec.allOnes 11) 0
-def negInf  : F64 := F64.pack true  (BitVec.allOnes 11) 0
-def qNaN    : F64 := F64.pack false (BitVec.allOnes 11) (1 <<< 51)
+def posZero    : F64 := F64.pack false 0 0
+def negZero    : F64 := F64.pack true  0 0
+def posInf     : F64 := F64.pack false (BitVec.allOnes 11) 0
+def negInf     : F64 := F64.pack true  (BitVec.allOnes 11) 0
+def qNaN       : F64 := F64.pack false (BitVec.allOnes 11) (1 <<< 51)
+def maxNorm    : F64 := F64.pack false (0x7FE : BitVec 11) (BitVec.allOnes 52)
+def minNorm    : F64 := F64.pack false (0x001 : BitVec 11) 0
+def minSubnorm : F64 := F64.pack false 0 1
+
+-- ── Comparison ───────────────────────────────────────────────────────────────
+
+/-- IEEE 754 equality: NaN ≠ NaN, +0 = -0. -/
+def feq (a b : F64) : Bool :=
+  if a.isNaN || b.isNaN then false
+  else if a.isZero && b.isZero then true
+  else a == b
+
+/-- IEEE 754 less-than. -/
+def flt (a b : F64) : Bool :=
+  if a.isNaN || b.isNaN then false
+  else if a.isZero && b.isZero then false
+  else if a.isZero then !b.sign
+  else if b.isZero then a.sign
+  else
+    match a.sign, b.sign with
+    | true,  false => true
+    | false, true  => false
+    | false, false => a.toNat < b.toNat
+    | true,  true  => a.toNat > b.toNat
+
+def fle (a b : F64) : Bool := F64.feq a b || F64.flt a b
+def fgt (a b : F64) : Bool := F64.flt b a
+def fge (a b : F64) : Bool := F64.fle b a
+
+def fmin (a b : F64) : F64 :=
+  if a.isNaN then b else if b.isNaN then a
+  else if F64.flt a b then a else b
+
+def fmax (a b : F64) : F64 :=
+  if a.isNaN then b else if b.isNaN then a
+  else if F64.flt a b then b else a
 
 -- ── Decode / Encode ───────────────────────────────────────────────────────────
 

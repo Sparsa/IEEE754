@@ -138,12 +138,20 @@ IEEE754/
 ├── Conversions.lean          §10      F32↔F64, F32↔Int32
 ├── Oracle.lean               §12      @[export] functions for Python ctypes
 └── Theorems/
-    ├── Classification.lean   §11a     exclusivity lemmas, F32Class
-    ├── Props.lean            §11b     algebraic properties, roundTo lemmas
-    ├── Codec.lean            §11c     encode/decode round-trip theorems ✅
-    ├── NaN.lean              §11B–C   NaN propagation and invalid-op cases
-    ├── Inf.lean              §11D     Inf arithmetic theorems ✅
-    └── Sign.lean             §11E–J   sign rules, order, FMA, sqrt theorems
+    ├── F32/
+    │   ├── Classification.lean   §11a     exclusivity lemmas, F32Class
+    │   ├── Props.lean            §11b     algebraic properties, roundTo lemmas
+    │   ├── Codec.lean            §11c     encode/decode round-trip theorems ✅
+    │   ├── NaN.lean              §11B–C   NaN propagation and invalid-op cases
+    │   ├── Inf.lean              §11D     Inf arithmetic theorems ✅
+    │   └── Sign.lean             §11E–J   sign rules, order, FMA, sqrt theorems
+    └── F64/
+        ├── Classification.lean   §11a     exclusivity lemmas, F64Class ✅
+        ├── Props.lean            (re-uses F32 format-agnostic lemmas)
+        ├── Codec.lean            §11c     encode/decode round-trip theorems ✅
+        ├── NaN.lean              §11B–C   NaN propagation and invalid-op cases ✅
+        ├── Inf.lean              §11D     Inf arithmetic theorems (fdiv sorry)
+        └── Sign.lean             §11E–J   sign rules, fsub, fsqrt (flt_trans sorry)
 ```
 
 ### Import dependency graph
@@ -151,15 +159,20 @@ IEEE754/
 ```
 Basic
   └── ExactOps
-        ├── F32/Defs ──────────────────── Oracle
-        │     └── Theorems/Classification
-        │               └── Props (+ Conversions)
-        │                         └── Codec
-        │                               └── NaN
-        │                                     └── Inf
-        │                                           └── Sign
+        ├── F32/Defs ──────────────────────────────── Oracle
+        │     └── Theorems/F32/Classification
+        │                    └── Props (+ Conversions)
+        │                          └── Codec
+        │                                └── NaN
+        │                                      └── Inf
+        │                                            └── Sign
         └── F64/Defs
-              └── Conversions (+ F32/Defs)
+              ├── Conversions (+ F32/Defs)
+              └── Theorems/F64/Classification
+                             └── Codec (imports F32/Props)
+                                   └── NaN
+                                         └── Inf
+                                               └── Sign
 ```
 
 ---
@@ -446,11 +459,28 @@ Infinity arithmetic (IEEE 754-2019 §6.1):
 
 Exported C-callable functions for hardware co-simulation (Python/ctypes, cocotb, CVDP):
 
+**F32 (`namespace F32.Oracle`):**
+
 ```lean
-@[export f32_add]          def f32_add (a b : UInt32) (round : UInt8) : UInt32
-@[export f32_mul]          def f32_mul (a b : UInt32) (round : UInt8) : UInt32
-@[export f32_fma]          def f32_fma (a b c : UInt32) (round : UInt8) : UInt32
+@[export f32_add]          def f32_add  (a b : UInt32) (round : UInt8) : UInt32
+@[export f32_sub]          def f32_sub  (a b : UInt32) (round : UInt8) : UInt32
+@[export f32_mul]          def f32_mul  (a b : UInt32) (round : UInt8) : UInt32
+@[export f32_div]          def f32_div  (a b : UInt32) (round : UInt8) : UInt32
+@[export f32_fma]          def f32_fma  (a b c : UInt32) (round : UInt8) : UInt32
+@[export f32_sqrt]         def f32_sqrt (a : UInt32) (round : UInt8) : UInt32
 @[export float32_classify] def classify (a : UInt32) : UInt8
+```
+
+**F64 (`namespace F64.Oracle`):**
+
+```lean
+@[export f64_add]          def f64_add  (a b : UInt64) (round : UInt8) : UInt64
+@[export f64_sub]          def f64_sub  (a b : UInt64) (round : UInt8) : UInt64
+@[export f64_mul]          def f64_mul  (a b : UInt64) (round : UInt8) : UInt64
+@[export f64_div]          def f64_div  (a b : UInt64) (round : UInt8) : UInt64
+@[export f64_fma]          def f64_fma  (a b c : UInt64) (round : UInt8) : UInt64
+@[export f64_sqrt]         def f64_sqrt (a : UInt64) (round : UInt8) : UInt64
+@[export float64_classify] def classify (a : UInt64) : UInt8
 ```
 
 `classify` returns: 0 = NaN, 1 = Inf, 2 = Zero, 3 = Subnormal, 4 = Normal.
@@ -460,7 +490,16 @@ Compile with `lake build IEEE754Modular` and load the shared library with:
 ```python
 import ctypes
 lib = ctypes.CDLL("./build/lib/libIEEE754Modular.so")
+
+# F32: arguments and return value are UInt32 (c_uint32)
+lib.f32_add.restype  = ctypes.c_uint32
+lib.f32_add.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint8]
 result = lib.f32_add(0x3F800000, 0x3F800000, 0)  # 1.0 + 1.0 = 2.0
+
+# F64: arguments and return value are UInt64 (c_uint64)
+lib.f64_add.restype  = ctypes.c_uint64
+lib.f64_add.argtypes = [ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint8]
+result = lib.f64_add(0x3FF0000000000000, 0x3FF0000000000000, 0)  # 1.0 + 1.0 = 2.0
 ```
 
 ---

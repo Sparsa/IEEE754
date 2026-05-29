@@ -9,7 +9,7 @@
   §11J  Square root
 -/
 
-import IEEE754.Theorems.Inf
+import IEEE754.Theorems.F32.Inf
 
 open BitVec
 

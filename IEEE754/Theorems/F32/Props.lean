@@ -5,7 +5,7 @@
         roundTo correctness, NaN/Inf propagation through exact ops
 -/
 
-import IEEE754.Theorems.Classification
+import IEEE754.Theorems.F32.Classification
 import IEEE754.Conversions
 
 open BitVec
@@ -340,7 +340,7 @@ private theorem ite_fst {α β : Type} (p : Prop) [Decidable p] (a b : α × β)
     (if p then a else b).1 = if p then a.1 else b.1 := by
   by_cases hp : p <;> simp [hp]
 
-private theorem roundTo_false_dfSign (fmt : FPFormat) (rm : RoundMode)
+theorem roundTo_false_dfSign (fmt : FPFormat) (rm : RoundMode)
     (d : DecodedFloat) (hs : d.dfSign = false) :
     (roundTo fmt rm d).1.dfSign = false := by
   match d with

@@ -4,7 +4,7 @@
   §11D  Inf propagation (IEEE 754-2019 §6.1)
 -/
 
-import IEEE754.Theorems.NaN
+import IEEE754.Theorems.F32.NaN
 
 open BitVec
 

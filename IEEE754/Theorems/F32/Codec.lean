@@ -5,8 +5,8 @@
         encode_decode_normal, encode_decode_subnormal, and related helpers
 -/
 
-import IEEE754.Theorems.Props
-import IEEE754.Theorems.Classification
+import IEEE754.Theorems.F32.Props
+import IEEE754.Theorems.F32.Classification
 
 open BitVec
 
@@ -198,7 +198,7 @@ theorem pack_sign_expRaw_mantissa (f : F32) :
 
 
 /-- findLeadingBit of any n in [2^k, 2^(k+1)) equals k. -/
-private theorem findLeadingBit_range {n k : Nat} (hge : 2^k ≤ n) (hlt : n < 2^(k+1)) :
+theorem findLeadingBit_range {n k : Nat} (hge : 2^k ≤ n) (hlt : n < 2^(k+1)) :
     findLeadingBit n (n.log2 + 1) = k := by
   have hlog : n.log2 = k := (Nat.log2_eq_iff (by omega)).mpr ⟨hge, hlt⟩
   rw [hlog]

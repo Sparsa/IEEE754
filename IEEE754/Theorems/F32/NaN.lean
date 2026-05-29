@@ -5,7 +5,7 @@
   §11C  Invalid operations → NaN (IEEE 754-2019 §7.2)
 -/
 
-import IEEE754.Theorems.Codec
+import IEEE754.Theorems.F32.Codec
 
 open BitVec
 

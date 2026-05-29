@@ -142,7 +142,7 @@ IEEE754/
     ├── Props.lean            §11b     algebraic properties, roundTo lemmas
     ├── Codec.lean            §11c     encode/decode round-trip theorems ✅
     ├── NaN.lean              §11B–C   NaN propagation and invalid-op cases
-    ├── Inf.lean              §11D     Inf arithmetic theorems
+    ├── Inf.lean              §11D     Inf arithmetic theorems ✅
     └── Sign.lean             §11E–J   sign rules, order, FMA, sqrt theorems
 ```
 
@@ -379,8 +379,8 @@ Infinity arithmetic (IEEE 754-2019 §6.1):
 | Theorem | Statement |
 |---------|-----------|
 | `fadd_inf_finite` | `a.isInf → b.isFinite → (fadd rm a b).isInf ∧ sign preserved` |
-| `fmul_inf_nonzero` | `a.isInf → b.isFinite → ¬b.isZero → (fmul rm a b).isInf ∧ sign = XOR` *(sign cases sorry)* |
-| `fdiv_nonzero_zero` | `a.isFinite → ¬a.isZero → b.isZero → (fdiv rm a b).isInf` *(sign conjunct sorry)* |
+| `fmul_inf_nonzero` | `a.isInf → b.isFinite → ¬b.isZero → (fmul rm a b).isInf ∧ sign = XOR` |
+| `fdiv_nonzero_zero` | `a.isFinite → ¬a.isZero → b.isZero → (fdiv rm a b).isInf` |
 
 ---
 
@@ -549,8 +549,6 @@ Open `sorry`s — work in progress:
 
 | Location | Theorem | What's missing |
 |----------|---------|----------------|
-| `Theorems/Inf.lean` | `fmul_inf_nonzero` | Sign cases (`cases a.sign <;> cases b.sign`) |
-| `Theorems/Inf.lean` | `fdiv_nonzero_zero` | Second conjunct: sign of the infinite result |
 | `Theorems/Sign.lean` | `flt_trans` | Full transitivity case analysis |
 | `Theorems/Sign.lean` | `fadd_posZero_r` | Identity law `fadd rm f posZero = f` (multiple branches) |
 
@@ -561,6 +559,8 @@ Recently closed:
 | `Theorems/Codec.lean` | `encode_decode_normal` | ✅ |
 | `Theorems/Codec.lean` | `encode_decode_subnormal` | ✅ |
 | `Theorems/Props.lean` | `roundTo_idempotent` | ✅ proved via `isNormalForm` fixed-point characterisation |
+| `Theorems/Inf.lean` | `fmul_inf_nonzero` | ✅ sign = XOR via `mulExact_inf_nonzero` + pack case-split |
+| `Theorems/Inf.lean` | `fdiv_nonzero_zero` | ✅ both conjuncts; `mantIsZero` via `significand_nonzero_of_not_isZero` |
 
 All other theorems are fully proved using `bv_decide`, `bv_omega`, `native_decide`, `simp`, `omega`, and `grind`.
 

@@ -18,20 +18,255 @@ namespace F32
 -- ── E. Sign rules (IEEE 754-2019 §6.3) ───────────────────────────────────────
 
 /-- The product sign is XOR of operand signs (when result is not NaN). -/
+
+--#set_option maxHeartbeats 2000000
 theorem fmul_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
     (hza : ¬a.isZero) (hzb : ¬b.isZero)
     (hr  : ¬(F32.fmul rm a b).isNaN) :
     (F32.fmul rm a b).sign = (a.sign != b.sign) := by
-    simp [fmul]; simp [fmulEx]; simp [mulExact]
+    simp [fmul]
+    simp [fmulEx]
+    simp [mulExact]
     split
-    · { simp [roundTo]; simp [encode]; simp_all; rename_i heq; simp [sign] }
-    · { simp_all; simp [roundTo]; simp [encode] }
-    · { simp_all; simp [roundTo]; simp [encode] }
-    · { simp [roundTo]; simp [encode] }
-    · { simp [roundTo]; simp [encode]; simp [pack] }
-    · { simp_all }
+    ·{
+      rename_i aheq
+      simp [decode] at aheq
+      simp_all
+      by_cases h_inf : a.isInf <;>
+      ·{
+        simp [h_inf] at aheq
+      }
+    }
+    ·{
+      rename_i bheq aheq
+      simp_all
+      simp [decode] at bheq
+      simp [hnb] at bheq
+      by_cases h_inf : b.isInf
+      ·{
+        simp [h_inf] at bheq
+      }
+      ·{
+        simp [h_inf] at bheq
+        simp [hzb] at bheq
+      }
+    }
+    ·{
+      have fmul_nan : (fmul rm a b).isNaN := by
+        simp [fmul]
+        simp [fmulEx]
+        simp [mulExact]
+        simp_all
+        simp [roundTo]
+        simp [encode]
+        simp [isNaN]
+        simp [qNaN]
+        simp [pack]
+        simp [expIsMax]
+        simp [expRaw]
+        simp [mantIsZero]
+        simp [mantissa]
+      contradiction
+    }
+    ·{
+      have fmul_nan : (fmul rm a b).isNaN := by
+        simp [fmul]
+        simp [fmulEx]
+        simp [mulExact]
+        simp_all
+        simp [roundTo]
+        simp [encode]
+        simp [isNaN]
+        simp [qNaN]
+        simp [pack]
+        simp [expIsMax]
+        simp [expRaw]
+        simp [mantIsZero]
+        simp [mantissa]
+      contradiction
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp [pack]
+      split
+      ·{
+        simp_all
+        rename_i heq_a heq_b ab
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        rw [← ab] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        simp_all
+        rename_i heq_a heq_b ab
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf <;>
+        ·{
+          simp_all
+        }
+      }
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp [pack]
+      split
+      ·{
+        simp_all
+        rename_i heq_a heq_b ab
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        rw [← ab] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        simp_all
+        rename_i heq_a heq_b ab
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf <;>
+        ·{
+          simp_all
+        }
+      }
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp [pack]
+      split
+      ·{
+        simp_all
+        rename_i heq_a heq_b ab
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        rw [← ab] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        simp_all
+        rename_i heq_a heq_b ab
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf <;>
+        ·{
+          simp_all
+        }
+      }
+    }
+    ·{
+      simp [roundTo]
+      simp [encode]
+      simp [pack]
+      split
+      ·{
+        simp_all
+        rename_i heq_a heq_b ab
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf <;>
+        ·{
+          grind
+        }
+      }
+      ·{
 
+        rename_i heq_a heq_b df ss lf
+        simp [decode] at heq_b heq_a
+        simp [hnb] at heq_b heq_a
+        simp [hzb] at heq_b heq_a
+        simp [sign]
+        simp [sign] at heq_b heq_a
+        by_cases binf: b.isInf <;> by_cases ainf : a.isInf
+        ·{
+          grind
+        }
+        ·{
+          grind
+        }
+        ·{
+          grind
+        }
+        ·{
+
+
+          simp [binf] at heq_b
+          simp [ainf] at heq_a
+          simp [hza] at heq_a
+          simp [hna] at heq_a
+          rename_i dfa dfb dfas dfae dfasig dfbs dfbe dfbsig
+          by_cases signab : (dfas = dfbs)
+          ·{
+            simp [signab] at lf
+            split at lf
+            ·{ simp_all }
+            ·{ simp_all }
+            ·{ simp_all }
+            ·{
+              rename_i d s e sig x sp
+              have hge : 2^(sig.log2) ≤ sig := by apply Nat.log2_self_le; omega
+              have hlt : sig < 2^(sig.log2+1) := Nat.lt_log2_self
+              have flb : findLeadingBit sig (sig.log2 + 1) = sig.log2 := findLeadingBit_range hge hlt
+              simp [flb] at lf
+              cases dfas <;> cases dfbs <;> simp_all
+            }
+            ·{ simp_all }
+            ·{ simp_all }
+          }
+          ·{
+            split at lf
+            ·{ simp_all }
+            ·{ simp_all }
+            ·{ simp_all }
+            ·{
+              rename_i d s e sig x sp
+              have hge : 2^(sig.log2) ≤ sig := by apply Nat.log2_self_le; omega
+              have hlt : sig < 2^(sig.log2+1) := Nat.lt_log2_self
+              have flb : findLeadingBit sig (sig.log2 + 1) = sig.log2 := findLeadingBit_range hge hlt
+              simp [flb] at lf
+              cases dfas <;> cases dfbs <;> simp_all
+            }
+            ·{ simp_all }
+            ·{ simp_all }
+          }
+
+        }
+      }
+    }
 /-- The quotient sign is XOR of operand signs (when result is not NaN). -/
 theorem fdiv_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
@@ -174,17 +409,18 @@ private theorem negate_significand' (f : F32) : f.negate.significand = f.signifi
 private theorem addExact_opp_cancel (rm : RoundMode) (s : Bool) (e : Int) (sig : Nat) :
     ∃ s', (addExact rm (.finite s e sig) (.finite (!s) e sig)).1 = .finite s' 0 0 := by
   by_cases h0 : sig = 0
-  · subst h0
+  ·{
+    subst h0
     exact ⟨s && !s || (s || !s) && (rm == .RDN), by simp [addExact]⟩
-  · refine ⟨rm == .RDN, ?_⟩
+  }
+  ·{
+    refine ⟨rm == .RDN, ?_⟩
     have hb : (sig == 0) = false := by simpa using h0
     have hne : (s == !s) = false := by cases s <;> rfl
     have hdiff : (e - e : Int).toNat = 0 := by omega
-    simp only [addExact, hb, Bool.false_and, Bool.and_false, ite_false,
-               if_pos (le_refl e), hdiff, Nat.shiftLeft_zero, hne,
-               ge_iff_le, le_refl, ite_true, Nat.sub_self,
-               show (0 : Nat) == 0 = true from rfl]
-
+    simp only [addExact, hb,  Bool.and_false ]
+    simp
+  }
 /-- x − x = ±0 for any finite non-NaN (IEEE 754 cancellation). -/
 theorem fsub_self_isZero (rm : RoundMode) (a : F32) (h : ¬a.isNaN) (hi : ¬a.isInf) :
     (F32.fsub rm a a).isZero := by

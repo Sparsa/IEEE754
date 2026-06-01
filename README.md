@@ -144,7 +144,7 @@ IEEE754/
     │   ├── Codec.lean            §11c     encode/decode round-trip theorems ✅
     │   ├── NaN.lean              §11B–C   NaN propagation and invalid-op cases
     │   ├── Inf.lean              §11D     Inf arithmetic theorems ✅
-    │   └── Sign.lean             §11E–J   sign rules, order, FMA, sqrt theorems
+    │   └── Sign.lean             §11E–J   sign rules, order, FMA, sqrt theorems ✅
     └── F64/
         ├── Classification.lean   §11a     exclusivity lemmas, F64Class ✅
         ├── Props.lean            (re-uses F32 format-agnostic lemmas)
@@ -601,8 +601,6 @@ Open `sorry`s — work in progress:
 
 | Location | Theorem | What's missing |
 |----------|---------|----------------|
-| `Theorems/F32/Sign.lean` | `flt_trans` | Full transitivity case analysis |
-| `Theorems/F32/Sign.lean` | `fadd_posZero_r` | Identity law `fadd rm f posZero = f` (multiple branches) |
 | `Theorems/F64/Inf.lean` | `fdiv_nonzero_zero` | Case analysis over F64 classification (mirrors F32 proof) |
 | `Theorems/F64/Sign.lean` | `flt_trans` | Full transitivity case analysis |
 | `Theorems/F64/Sign.lean` | `fadd_posZero_r` | Identity law `fadd rm f posZero = f` (multiple branches) |
@@ -612,6 +610,10 @@ Recently closed:
 
 | Location | Theorem | Closed |
 |----------|---------|--------|
+| `Theorems/F32/Sign.lean` | `flt_trans` | ✅ full transitivity case analysis |
+| `Theorems/F32/Sign.lean` | `fadd_posZero_r` | ✅ identity law `fadd rm f posZero = f` |
+| `Theorems/F32/Sign.lean` | `fmul_sign_xor` | ✅ sign = XOR; `findLeadingBit_range` + `cases dfas <;> cases dfbs` |
+| `Theorems/F32/Sign.lean` | `fdiv_sign_xor` | ✅ sign = XOR; `encode_{false,true}_sign` + `roundTo_sign_preserved` |
 | `Theorems/F32/Codec.lean` | `encode_decode_normal` | ✅ |
 | `Theorems/F32/Codec.lean` | `encode_decode_subnormal` | ✅ |
 | `Theorems/F32/Props.lean` | `roundTo_idempotent` | ✅ proved via `isNormalForm` fixed-point characterisation |

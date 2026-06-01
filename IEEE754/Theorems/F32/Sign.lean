@@ -571,72 +571,228 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
     (hr  : ¬(F32.fadd rm a b).isNaN)
     (hrz : ¬(F32.fadd rm a b).isZero) :
     (F32.fadd rm a b).sign = s := by
-    have ha_dfSign : (F32.decode a).dfSign = s := by
-      simp [F32.decode, hna, ha]
-      split
-      ·{
-        simp [DecodedFloat.dfSign]
-      }
-      ·{
-        split <;>
-        ·{
-          simp [DecodedFloat.dfSign]
-        }
-      }
-    have hb_dfSign : (F32.decode b).dfSign = s := by
-      simp [F32.decode, hnb, hb]
-      split
-      ·{
-        simp [DecodedFloat.dfSign]
-      }
-      ·{
-        split <;>
-        ·{
-          simp [DecodedFloat.dfSign]
-        }
-      }
-
-    simp [F32.fadd, F32.faddEx, addExact]
-    cases hda : F32.decode a
+    simp [fadd]; simp [faddEx]; simp [addExact]
+    split
     ·{
-      simp [F32.decode, hna] at hda
-
-
+      rename_i dfa dfb aheq
+      simp [decode] at aheq
+      simp [hna] at aheq
+      by_cases h_inf : a.isInf <;> by_cases h_zero : a.isZero
+      ·{
+        simp [h_inf] at aheq
+      }
+      ·{
+        simp [h_inf] at aheq
+      }
+      ·{
+        simp [h_inf] at aheq
+        simp [h_zero] at aheq
+      }
+      ·{
+        simp [h_inf] at aheq
+        simp [h_zero] at aheq
+      }
     }
-    · rename_i sa
-      cases hdb : F32.decode b
-      · simp [F32.decode, hnb] at hdb
-      · rename_i sb
-        have hsa : sa = s := by simpa [hda] using ha_dfSign
-        have hsb : sb = s := by simpa [hdb] using hb_dfSign
-        simp [hda, hdb, addExact, roundTo, encode, sign, hsa, hsb]
-        split <;> simp
-      · rename_i sb eb sigb
-        have hsa : sa = s := by simpa [hda] using ha_dfSign
-        simp [hda, hdb, addExact, roundTo, encode, sign, hsa]
-    · rename_i sa ea siga
-      cases hdb : F32.decode b
-      · simp [F32.decode, hnb] at hdb
-      · rename_i sb
-        have hsb : sb = s := by simpa [hdb] using hb_dfSign
-        simp [hda, hdb, addExact, roundTo, encode, sign, hsb]
-      · rename_i sb eb sigb
-        have hsa : sa = s := by simpa [hda] using ha_dfSign
-        have hsb : sb = s := by simpa [hdb] using hb_dfSign
-        simp [addExact, hda, hdb, hsa, hsb]
-        split
-        · have hres_zero : (F32.fadd rm a b).isZero := by
-            simp [F32.fadd, F32.faddEx, hda, hdb, hsa, hsb, addExact, roundTo, encode, isZero, pack]
-          exact absurd hres_zero hrz
-        · split
-          · simp [roundTo, encode, sign, hsb, pack]
-          · split
-            · simp [roundTo, encode, sign, hsa, pack]
-            · split
-              · have hres_zero : (F32.fadd rm a b).isZero := by
-                  simp [F32.fadd, F32.faddEx, hda, hdb, hsa, hsb, addExact, roundTo, encode, isZero, pack]
-                exact absurd hres_zero hrz
-              · simp [roundTo, encode, sign, hsa, hsb, pack]
+    ·{
+      rename_i dfa dfb bheq x
+      simp [decode] at bheq
+      simp [hnb] at bheq
+      by_cases h_inf : b.isInf <;> by_cases h_zero : b.isZero
+      ·{
+        simp [h_inf] at bheq
+      }
+      ·{
+        simp [h_inf] at bheq
+      }
+      ·{
+        simp [h_inf] at bheq
+        simp [h_zero] at bheq
+      }
+      ·{
+        simp [h_inf] at bheq
+        simp [h_zero] at bheq
+      }
+    }
+    ·{
+      rename_i dfa dfb sa sb heqa heqb
+      by_cases signab : (sa = sb)
+      ·{
+        simp [signab]
+        simp [roundTo]
+        simp [encode]
+        simp [pack]
+        simp [sign]
+        have hsignb : b.sign = sb := by
+          simp [decode] at heqb
+          simp [hnb] at heqb
+          by_cases h_inf: b.isInf <;> by_cases h_zero : b.isZero <;>
+          ·{
+            simp_all
+          }
+        have hsigna : a.sign = sa := by
+          simp [decode] at heqa
+          simp [hna] at heqa
+          by_cases h_inf: a.isInf <;> by_cases h_zero : a.isZero <;>
+          ·{
+            simp_all
+          }
+        rw [hb] at hsignb
+        rw [← hsignb]
+        split <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        have fadd_nan: (fadd rm a b).isNaN = true := by
+          simp [fadd]; simp [faddEx]; simp [addExact]
+          simp_all
+          simp [roundTo]
+          simp [encode]
+          native_decide
+        contradiction
+      }
+    }
+    ·{
+      rename_i da db ss aheq bheq x
+      simp [roundTo]
+      simp [encode]
+      simp [sign]
+      simp [pack]
+      simp [decode] at aheq
+      simp [hna] at aheq
+      by_cases ainf : a.isInf <;> by_cases azero : a.isZero
+      ·{
+        simp [ainf] at aheq
+        rw [ha] at aheq
+        rw [← aheq]
+        split <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        simp [ainf] at aheq
+        rw [ha] at aheq
+        rw [← aheq]
+        split <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        simp [ainf] at aheq
+        simp [azero] at aheq
+      }
+      ·{
+        simp [ainf] at aheq
+        simp [azero] at aheq
+      }
+    }
+    ·{
+      rename_i da db ss bheq aheq x
+      simp [roundTo]
+      simp [encode]
+      simp [sign]
+      simp [pack]
+      simp [decode] at aheq
+      simp [hna] at aheq
+      have bsign: b.sign = ss := by
+        simp [decode] at bheq
+        simp [hnb] at bheq
+        by_cases h_inf: b.isInf <;> by_cases h_zero : b.isZero <;>
+        ·{
+          simp_all
+        }
+      by_cases ainf : a.isInf <;> by_cases azero : a.isZero
+      ·{
+        simp [ainf] at aheq
+        have azF : a.isZero = false :=  isZero_false_of_isInf a ainf
+        simp_all
+      }
+      ·{
+        simp [ainf] at aheq
+        rw [hb] at bsign
+        rw [← bsign]
+        split <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        simp [ainf] at aheq
+        simp [azero] at aheq
+        rw [hb] at bsign
+        rw [← bsign]
+        split <;>
+        ·{
+          simp_all
+        }
+      }
+      ·{
+        simp [ainf] at aheq
+        simp [azero] at aheq
+        rw [hb] at bsign
+        rw [← bsign]
+        split <;>
+        ·{
+          simp_all
+      }
+      }
+    }
+    ·{
+      rename_i da db sa ea siga sb eb sigb aheq bheq
+      simp [roundTo]
+      simp [encode]
+      simp [sign]
+      simp [pack]
+      simp [decode] at aheq
+      simp [hna] at aheq
+      have bsign: b.sign = sb := by
+        simp [decode] at bheq
+        simp [hnb] at bheq
+        by_cases h_inf: b.isInf <;> by_cases h_zero : b.isZero <;>
+        ·{
+          simp_all
+        }
+      by_cases ainf : a.isInf <;> by_cases azero : a.isZero
+      ·{
+        simp [ainf] at aheq
+      }
+      ·{
+        simp [ainf] at aheq
+      }
+      ·{
+        have addNan : (fadd rm a b).isNaN = true := by
+          simp [fadd]; simp [faddEx]; simp [addExact]
+          simp_all
+          simp [roundTo]
+          simp [encode]
+          simp [decode]
+          simp [hna]
+          simp [ainf]
+          simp [azero]
+          obtain ⟨aheql,aheqm,aheqr⟩ := aheq
+          simp [aheqr]
+          by_cases hsbeq : (sigb = siga)
+          ·{
+            simp [hsbeq]
+            simp_all
+          }
+          native_decide
+        contradiction
+      }
+      ·{
+        simp [ainf] at aheq
+        simp [azero] at aheq
+        rw [hb] at bsign
+        rw [← bsign]
+        split <;>
+        ·{
+          simp_all
+      }
+      }
+    }
 
 -- ── F. Commutativity ──────────────────────────────────────────────────────────
 

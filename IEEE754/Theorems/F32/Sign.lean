@@ -267,6 +267,52 @@ theorem fmul_sign_xor {rm : RoundMode} {a b : F32}
         }
       }
     }
+-- ── Sign-preservation helpers (shared by fdiv_sign_xor and fsqrt_nonneg) ────────
+
+private theorem pack_sign_false (e : BitVec 8) (m : BitVec 23) :
+    (F32.pack false e m).sign = false := by simp [pack, sign]
+
+private theorem pack_sign_true (e : BitVec 8) (m : BitVec 23) :
+    (F32.pack true e m).sign = true := by simp [pack, sign]
+
+private theorem pack_sign (s : Bool) (e : BitVec 8) (m : BitVec 23) :
+    (F32.pack s e m).sign = s := by
+  cases s
+  · exact pack_sign_false e m
+  · exact pack_sign_true e m
+
+private theorem encode_false_sign (d : DecodedFloat) (hs : d.dfSign = false) :
+    (F32.encode d).sign = false := by
+  match d with
+  | .nan             => simp [encode, qNaN, pack, sign]
+  | .inf false       => simp [encode]; exact pack_sign_false _ _
+  | .inf true        => simp [DecodedFloat.dfSign] at hs
+  | .finite false _ 0        => simp [encode]; exact pack_sign_false _ _
+  | .finite false e (_ + 1) =>
+    simp only [encode]
+    split
+    · exact pack_sign_false _ _
+    · split
+      · simp [posInf, pack, sign]
+      · exact pack_sign_false _ _
+  | .finite true _ _ => simp [DecodedFloat.dfSign] at hs
+
+private theorem encode_true_sign (d : DecodedFloat) (hs : d.dfSign = true) :
+    (F32.encode d).sign = true := by
+  match d with
+  | .nan              => simp [DecodedFloat.dfSign] at hs
+  | .inf false        => simp [DecodedFloat.dfSign] at hs
+  | .inf true         => simp [encode]; exact pack_sign_true _ _
+  | .finite false _ _ => simp [DecodedFloat.dfSign] at hs
+  | .finite true _ 0  => simp [encode]; exact pack_sign_true _ _
+  | .finite true e (_ + 1) =>
+    simp only [encode]
+    split
+    · exact pack_sign_true _ _
+    · split
+      · simp [negInf, pack, sign]
+      · exact pack_sign_true _ _
+
 /-- The quotient sign is XOR of operand signs (when result is not NaN). -/
 theorem fdiv_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
@@ -275,17 +321,247 @@ theorem fdiv_sign_xor {rm : RoundMode} {a b : F32}
     (F32.fdiv rm a b).sign = (a.sign != b.sign) := by
     simp [fdiv]; simp [fdivEx]; simp [divExact]; simp [divExactWith]
     split
-    · {
+    ·{
       simp [roundTo]; simp [encode]; simp_all; rename_i heq
       simp [sign]; simp [decode] at heq; simp [hna] at heq; simp [hza] at heq
       simp [qNaN]; simp [pack]
+      by_cases hinf: a.isInf <;>
+      ·{
+        simp [hinf] at heq
+      }
     }
-    · { simp_all; simp [roundTo]; simp [encode]; simp [qNaN]; simp [sign]; simp [pack] }
-    · { simp [roundTo]; simp [encode]; simp [qNaN]; simp_all; simp [sign]; simp [pack] }
-    · { simp [roundTo]; simp [encode]; simp [qNaN]; simp_all; simp [sign]; simp [pack] }
-    · {
-      simp [roundTo]; simp [encode]; simp_all; simp [sign]; simp [pack]
-      split <;> · { simp_all }
+    ·{
+      simp_all
+      simp [roundTo]
+      simp [encode]
+      simp [qNaN]
+      simp [sign]
+      simp [pack]
+      rename_i heq_b heq_a
+      simp [decode] at heq_b
+      simp [hnb] at heq_b
+      simp [hzb] at heq_b
+      by_cases hinfb : b.isInf <;>
+      ·{
+        simp [hinfb] at heq_b
+      }
+    }
+    ·{
+      rename_i heq_a heq_b
+      have hcontra: (fdiv rm a b).isNaN = true := by
+        simp[fdiv]; simp [fdivEx]; simp [divExact]; simp [divExactWith]; simp [heq_a,heq_b]; simp [roundTo]; simp [encode]; native_decide
+      contradiction
+    }
+    ·{
+      rename_i heq_a heq_b
+      have hcontra: (fdiv rm a b).isNaN = true := by
+        simp[fdiv]; simp [fdivEx]; simp [divExact]; simp [divExactWith]; simp [heq_a,heq_b]; simp [roundTo]; simp [encode]; native_decide
+      contradiction
+    }
+    ·{
+      rename_i heq_a heq_b
+      rename_i exp sig
+      rename_i aa bb sa sb
+      simp [decode] at heq_a
+      simp [decode] at heq_b
+      simp [hna] at heq_a
+      simp [hnb] at heq_b
+      simp [hza] at heq_a
+      simp [hzb] at heq_b
+      by_cases hinfa : a.isInf <;> by_cases hinfb : b.isInf
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+        obtain ⟨sig, _, _ ⟩ := heq_b
+        by_cases sigab : (sa ≠ sb)
+        ·{
+          simp [roundTo]
+          simp [encode]
+          rw [heq_a,sig]
+          simp [sign]
+          simp [pack]
+          simp [sigab]
+        }
+        ·{
+          simp [roundTo]
+          simp [encode]
+          rw [heq_a,sig]
+          simp [sign]
+          simp [pack]
+          simp at sigab
+          simp_all
+        }
+      }
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+      }
+    }
+    ·{
+      rename_i heq_a heq_b
+      rename_i exp sig
+      rename_i aa bb sa sb
+      simp [decode] at heq_a
+      simp [decode] at heq_b
+      simp [hna] at heq_a
+      simp [hnb] at heq_b
+      simp [hza] at heq_a
+      simp [hzb] at heq_b
+      by_cases hinfa : a.isInf <;> by_cases hinfb : b.isInf
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+        obtain ⟨asign,_,_⟩ := heq_a
+        simp [roundTo]
+        simp [encode]
+        simp [heq_b, asign]
+        simp [pack, sign]
+        by_cases signeq : sa = sig <;>
+        ·{
+          simp [signeq]
+        }
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+      }
+    }
+    ·{
+      rename_i heq_a heq_b
+      rename_i exp x
+      rename_i aa bb sa sb
+      rename_i dfa dfb
+      simp [decode] at heq_a heq_b
+      simp [hna] at heq_a
+      simp [hnb] at heq_b
+      simp [hza] at heq_a
+      simp [hzb] at heq_b
+      by_cases hinfa : a.isInf <;> by_cases hinfb : b.isInf
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+        obtain ⟨sigaa, _ , _ ⟩ := heq_a
+        obtain ⟨sigbb, _ , _ ⟩ := heq_b
+        simp [sigaa,sigbb]
+        simp [roundTo]
+        simp [encode]
+        simp [pack]
+        simp [sign]
+        by_cases signeq : aa = sb <;>
+        ·{
+          simp [signeq]
+        }
+      }
+    }
+    ·{
+      rename_i heq_a heq_b
+      rename_i exp x
+      rename_i aa bb sa sb
+      rename_i dfa dfb
+      simp [decode] at heq_a heq_b
+      simp [hna] at heq_a
+      simp [hnb] at heq_b
+      simp [hza] at heq_a
+      simp [hzb] at heq_b
+      by_cases hinfa : a.isInf <;> by_cases hinfb : b.isInf
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+        obtain ⟨sigaa, _ , _ ⟩ := heq_a
+        obtain ⟨sigbb, _ , _ ⟩ := heq_b
+        simp [sigaa,sigbb]
+        simp [roundTo]
+        simp [encode]
+        simp [pack]
+        by_cases signeq : aa = sa
+        ·{
+          simp [signeq]
+          simp [sign]
+        }
+        ·{
+          simp [signeq]
+          simp [sign]
+          exact signeq
+        }
+      }
+    }
+    ·{
+      rename_i heq_a heq_b
+      rename_i x1 x2 x3
+      rename_i sa ea siga
+      rename_i sb eb sigb
+      rename_i dfa dfb
+      simp [decode] at heq_a heq_b
+      simp [hna] at heq_a
+      simp [hnb] at heq_b
+      simp [hza] at heq_a
+      simp [hzb] at heq_b
+      by_cases hinfa : a.isInf <;> by_cases hinfb : b.isInf
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+      }
+      ·{
+        simp [hinfa] at heq_a
+        simp [hinfb] at heq_b
+        obtain ⟨sigaa, _ , _ ⟩ := heq_a
+        obtain ⟨sigbb, _ , _ ⟩ := heq_b
+        simp [sigaa,sigbb]
+        by_cases signeq : sb = sa
+        ·{
+          have hbne : (sb != sa) = false := by simp [signeq]
+          rw [hbne]
+          apply encode_false_sign
+          split <;>
+          ·{
+            apply roundTo_sign_preserved
+          }
+        }
+        ·{
+          have hbne : (sb != sa) = true := by cases sa <;> cases sb <;> simp_all
+          rw [hbne]
+          apply encode_true_sign
+          apply roundTo_sign_preserved
+        }
+      }
     }
 
 /-- When both addends share the same sign, so does a nonzero result. -/
@@ -297,13 +573,36 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
     (F32.fadd rm a b).sign = s := by
     have ha_dfSign : (F32.decode a).dfSign = s := by
       simp [F32.decode, hna, ha]
-      split <;> simp
+      split
+      ·{
+        simp [DecodedFloat.dfSign]
+      }
+      ·{
+        split <;>
+        ·{
+          simp [DecodedFloat.dfSign]
+        }
+      }
     have hb_dfSign : (F32.decode b).dfSign = s := by
       simp [F32.decode, hnb, hb]
-      split <;> simp
+      split
+      ·{
+        simp [DecodedFloat.dfSign]
+      }
+      ·{
+        split <;>
+        ·{
+          simp [DecodedFloat.dfSign]
+        }
+      }
+
     simp [F32.fadd, F32.faddEx, addExact]
     cases hda : F32.decode a
-    · simp [F32.decode, hna] at hda
+    ·{
+      simp [F32.decode, hna] at hda
+
+
+    }
     · rename_i sa
       cases hdb : F32.decode b
       · simp [F32.decode, hnb] at hdb
@@ -378,28 +677,26 @@ theorem flt_asymm {a b : F32} (h : F32.flt a b) : F32.flt b a = false := by
 /-- flt is transitive. -/
 theorem flt_trans {a b c : F32}
     (h1 : F32.flt a b) (h2 : F32.flt b c) : F32.flt a c := by
-    simp [flt] at *
-    repeat (split at h1 <;> simp_all)
-    repeat (split at h2 <;> simp_all)
-    cases ha : a.sign
-    · cases hb : b.sign
-      · -- a.sign = false, b.sign = false
-        have ha_lt_b : a.toNat < b.toNat := by simpa [ha, hb] using h1
-        cases hc : c.sign
-        · simpa [ha, hc] using Nat.lt_trans ha_lt_b (by simpa [hb, hc] using h2)
-        · simp [hb, hc] at h2
-      · simp [ha, hb] at h1
-    · cases hb : b.sign
-      · -- a.sign = true, b.sign = false
-        cases hc : c.sign
-        · simp [ha, hc]
-        · simp [hb, hc] at h2
-      · -- a.sign = true, b.sign = true
-        have ha_gt_b : a.toNat > b.toNat := by simpa [ha, hb] using h1
-        cases hc : c.sign
-        · simp [ha, hc]
-        · have hb_gt_c : b.toNat > c.toNat := by simpa [hb, hc] using h2
-          simpa [ha, hc] using Nat.lt_trans hb_gt_c ha_gt_b
+    simp [flt]
+    simp [flt ] at h1
+    simp [flt] at h2
+    obtain ⟨ h1l,h1m,h1r ⟩ := h1
+    obtain ⟨ h2l,h2m,h2r ⟩ := h2
+    constructor
+    ·{
+      obtain ⟨hll₁,_⟩ := h1l
+      obtain ⟨_,hll₂⟩ := h2l
+      apply And.intro hll₁ hll₂
+    }
+    ·{
+      constructor
+      ·{
+        grind
+      }
+      ·{
+        grind
+      }
+    }
 
 /-- NaN comparisons always return false (IEEE 754 §5.11 "unordered"). -/
 theorem flt_nan_l (a b : F32) (h : a.isNaN) : F32.flt a b = false := by
@@ -679,41 +976,11 @@ theorem fsqrt_negZero (rm : RoundMode) :
     rw [neg_zero_not_nan, neg_zero_is_zero, neg_zero_not_inf, neg_zero_sign_true]
     simp; simp [sqrtExact]; simp [roundTo]; simp [encode]; decide
 
--- ── Sign-preservation helpers for fsqrt_nonneg ───────────────────────────────
-
-private theorem pack_sign_false (e : BitVec 8) (m : BitVec 23) :
-    (F32.pack false e m).sign = false := by simp [pack, sign]
-
-private theorem pack_sign_true (e : BitVec 8) (m : BitVec 23) :
-    (F32.pack true e m).sign = true := by simp [pack, sign]
-
-private theorem pack_sign (s : Bool) (e: BitVec 8) (m: BitVec 23) :
-  (F32.pack s e m).sign = s := by
-  cases s
-  · exact pack_sign_false e m
-  · exact pack_sign_true e m
-
 private theorem sqrtExact_false_dfSign (e : Int) (sig : Nat) :
     (sqrtExact (.finite false e sig)).1.dfSign = false := by
   match sig with
   | 0     => simp [sqrtExact, DecodedFloat.dfSign]
   | _ + 1 => simp [sqrtExact, DecodedFloat.dfSign]
-
-private theorem encode_false_sign (d : DecodedFloat) (hs : d.dfSign = false) :
-    (F32.encode d).sign = false := by
-  match d with
-  | .nan             => simp [encode, qNaN, pack, sign]
-  | .inf false       => simp [encode]; exact pack_sign_false _ _
-  | .inf true        => simp [DecodedFloat.dfSign] at hs
-  | .finite false _ 0        => simp [encode]; exact pack_sign_false _ _
-  | .finite false e (_ + 1) =>
-    simp only [encode]
-    split
-    · exact pack_sign_false _ _
-    · split
-      · simp [posInf, pack, sign]
-      · exact pack_sign_false _ _
-  | .finite true _ _ => simp [DecodedFloat.dfSign] at hs
 
 /-- The result of fsqrt is always non-negative when it is not NaN. -/
 theorem fsqrt_nonneg (rm : RoundMode) (a : F32) (h : ¬(F32.fsqrt rm a).isNaN) (anNeg :

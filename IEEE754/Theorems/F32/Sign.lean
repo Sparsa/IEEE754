@@ -295,31 +295,49 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
     (hr  : ¬(F32.fadd rm a b).isNaN)
     (hrz : ¬(F32.fadd rm a b).isZero) :
     (F32.fadd rm a b).sign = s := by
-    simp [fadd]; simp [faddEx]; simp [addExact]
-    have a_non_nan : ¬ a.decode = DecodedFloat.nan := by
-      simp [decode]; simp at hna; rw [hna]; simp; grind
-    have b_non_nan : ¬ b.decode = DecodedFloat.nan := by
-      simp [decode]; simp at hnb; rw [hnb]; simp; grind
-    split
-    · { simp [roundTo]; simp [encode]; grind }
-    · { contradiction }
-    · {
-      rename_i aa bb sa sb heq1 heq2
-      split
-      · {
-        simp [roundTo]; simp [encode]; simp [sign]
-        have seq : a.sign = sa := by
-          simp [decode, hna] at heq1
-          cases hai : a.isInf
-          · {
-            simp [hai] at heq1
-            cases haz : a.isZero
-            · { simp [haz] at heq1 }
-            · { simp [haz] at heq1 }
-          }
-          · { simp [hai] at heq1; exact heq1 }
-      }
-    }
+    have ha_dfSign : (F32.decode a).dfSign = s := by
+      simp [F32.decode, hna, ha]
+      split <;> simp
+    have hb_dfSign : (F32.decode b).dfSign = s := by
+      simp [F32.decode, hnb, hb]
+      split <;> simp
+    simp [F32.fadd, F32.faddEx, addExact]
+    cases hda : F32.decode a
+    · simp [F32.decode, hna] at hda
+    · rename_i sa
+      cases hdb : F32.decode b
+      · simp [F32.decode, hnb] at hdb
+      · rename_i sb
+        have hsa : sa = s := by simpa [hda] using ha_dfSign
+        have hsb : sb = s := by simpa [hdb] using hb_dfSign
+        simp [hda, hdb, addExact, roundTo, encode, sign, hsa, hsb]
+        split <;> simp
+      · rename_i sb eb sigb
+        have hsa : sa = s := by simpa [hda] using ha_dfSign
+        simp [hda, hdb, addExact, roundTo, encode, sign, hsa]
+    · rename_i sa ea siga
+      cases hdb : F32.decode b
+      · simp [F32.decode, hnb] at hdb
+      · rename_i sb
+        have hsb : sb = s := by simpa [hdb] using hb_dfSign
+        simp [hda, hdb, addExact, roundTo, encode, sign, hsb]
+      · rename_i sb eb sigb
+        have hsa : sa = s := by simpa [hda] using ha_dfSign
+        have hsb : sb = s := by simpa [hdb] using hb_dfSign
+        simp [addExact, hda, hdb, hsa, hsb]
+        split
+        · have hres_zero : (F32.fadd rm a b).isZero := by
+            simp [F32.fadd, F32.faddEx, hda, hdb, hsa, hsb, addExact, roundTo, encode, isZero, pack]
+          exact absurd hres_zero hrz
+        · split
+          · simp [roundTo, encode, sign, hsb, pack]
+          · split
+            · simp [roundTo, encode, sign, hsa, pack]
+            · split
+              · have hres_zero : (F32.fadd rm a b).isZero := by
+                  simp [F32.fadd, F32.faddEx, hda, hdb, hsa, hsb, addExact, roundTo, encode, isZero, pack]
+                exact absurd hres_zero hrz
+              · simp [roundTo, encode, sign, hsa, hsb, pack]
 
 -- ── F. Commutativity ──────────────────────────────────────────────────────────
 
@@ -360,10 +378,28 @@ theorem flt_asymm {a b : F32} (h : F32.flt a b) : F32.flt b a = false := by
 /-- flt is transitive. -/
 theorem flt_trans {a b c : F32}
     (h1 : F32.flt a b) (h2 : F32.flt b c) : F32.flt a c := by
-    simp [F32.flt] at *
-    have ⟨h1r, h1m, h1l⟩ := h1
-    have ⟨h2r, h2m, h2l⟩ := h2
-    sorry
+    simp [flt] at *
+    repeat (split at h1 <;> simp_all)
+    repeat (split at h2 <;> simp_all)
+    cases ha : a.sign
+    · cases hb : b.sign
+      · -- a.sign = false, b.sign = false
+        have ha_lt_b : a.toNat < b.toNat := by simpa [ha, hb] using h1
+        cases hc : c.sign
+        · simpa [ha, hc] using Nat.lt_trans ha_lt_b (by simpa [hb, hc] using h2)
+        · simp [hb, hc] at h2
+      · simp [ha, hb] at h1
+    · cases hb : b.sign
+      · -- a.sign = true, b.sign = false
+        cases hc : c.sign
+        · simp [ha, hc]
+        · simp [hb, hc] at h2
+      · -- a.sign = true, b.sign = true
+        have ha_gt_b : a.toNat > b.toNat := by simpa [ha, hb] using h1
+        cases hc : c.sign
+        · simp [ha, hc]
+        · have hb_gt_c : b.toNat > c.toNat := by simpa [hb, hc] using h2
+          simpa [ha, hc] using Nat.lt_trans hb_gt_c ha_gt_b
 
 /-- NaN comparisons always return false (IEEE 754 §5.11 "unordered"). -/
 theorem flt_nan_l (a b : F32) (h : a.isNaN) : F32.flt a b = false := by
@@ -455,14 +491,61 @@ theorem fsub_self_isZero (rm : RoundMode) (a : F32) (h : ¬a.isNaN) (hi : ¬a.is
 theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
     F32.feq (F32.fadd rm a F32.posZero) a := by
     cases ha: classify a
-    ·{
-      simp [fadd, faddEx, decode]
-      have ha_notn : a.isNaN = false := by sorry
-    }
-    · sorry
-    · sorry
-    · sorry
-    · sorry
+    · -- zero
+      have haz : a.isZero = true := (biject_class_zero _).mpr ha
+      have hnan : a.isNaN = false := isNaN_false_of_isZero a haz
+      have hinf : a.isInf = false := isInf_false_of_isZero a  haz
+      have hnanpos : posZero.isNaN = false := by native_decide
+      have hzeropos : posZero.isZero = true := by native_decide
+      have hsignpos : posZero.sign = false := by native_decide
+      simp [feq, fadd, faddEx, addExact, decode, hnan, haz, hinf, hnanpos, hzeropos, hsignpos, roundTo, encode, isZero, pack]
+    · -- subnormal
+      have hsub : a.isSubnormal = true := (biject_class_subnormal _).mpr ha
+      have hnan : a.isNaN = false := isNaN_false_of_isSubnormal a hsub
+      have hzero : a.isZero = false := isZero_false_of_isSubnormal a hsub
+      have hinf : a.isInf = false := isInf_false_of_isSubnormal a hsub
+      have hnorm : a.isNormal = false := isNormal_false_of_isSubnormal a hsub
+      have hnanpos : posZero.isNaN = false := by native_decide
+      have hzeropos : posZero.isZero = true := by native_decide
+      have hsignpos : posZero.sign = false := by native_decide
+      have h_fadd_eq_a : F32.fadd rm a posZero = a := by
+        simp [fadd, faddEx, addExact, decode, hnan, hzero, hinf, hnanpos, hzeropos, hsignpos, roundTo, encode]
+        simp_all
+        simpa using encode_decode_subnormal hsub
+      simp [feq, h_fadd_eq_a, h]
+    · -- normal
+      have hnorm : a.isNormal = true := (biject_class_normal _).mpr ha
+      have hnan : a.isNaN = false := isNaN_false_of_isNormal a hnorm
+      have hzero : a.isZero = false := isZero_false_of_isNormal a hnorm
+      have hinf : a.isInf = false := isInf_false_of_isNormal a hnorm
+      have hnanpos : posZero.isNaN = false := by native_decide
+      have hzeropos : posZero.isZero = true := by native_decide
+      have hsignpos : posZero.sign = false := by native_decide
+      have h_fadd_eq_a : F32.fadd rm a posZero = a := by
+        simp [fadd, faddEx, addExact, decode, hnan, hzero, hinf, hnorm, hnanpos, hzeropos, hsignpos, roundTo, encode]
+        simpa using encode_decode_normal hnorm
+      simp [feq, h_fadd_eq_a, h]
+    · -- inf
+      have hinf : a.isInf = true := (biject_class_inf _).mpr ha
+      have hnan : a.isNaN = false := isNaN_false_of_isInf a hinf
+      have hzero : a.isZero = false := isZero_false_of_isInf a hinf
+      have hnanpos : posZero.isNaN = false := by native_decide
+      have hzeropos : posZero.isZero = true := by native_decide
+      have hsignpos : posZero.sign = false := by native_decide
+      have h_fadd_eq_a : F32.fadd rm a posZero = a := by
+        simp [fadd, faddEx, addExact, decode, hnan, hinf, hzero, hnanpos, hzeropos, hsignpos, roundTo, encode]
+        have h_emax : a.expIsMax := by
+          have := hinf; simp [isInf] at this; exact this.1
+        have h_mzero : a.mantIsZero := by
+          have := hinf; simp [isInf] at this; exact this.2
+        have hexp : a.expRaw = expMax 8 23 := by
+          simpa [expIsMax] using h_emax
+        have hman : a.mantissa = 0 := by
+          simpa [mantIsZero] using h_mzero
+        simp [hexp, hman, F32.pack_sign_expRaw_mantissa]
+      simp [feq, h_fadd_eq_a, h]
+    · -- nan → impossible
+      exfalso; exact h ((biject_class_nan _).mpr ha)
 
 -- ── I. FMA: true single rounding ──────────────────────────────────────────────
 

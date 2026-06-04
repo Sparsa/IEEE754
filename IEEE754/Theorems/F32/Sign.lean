@@ -571,6 +571,111 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
     (hr  : ¬(F32.fadd rm a b).isNaN)
     (hrz : ¬(F32.fadd rm a b).isZero) :
     (F32.fadd rm a b).sign = s := by
+  -- Helper to extract sign from decode
+  have asign : a.sign = (a.decode.dfSign) := by
+    simp [decode, hna]
+    by_cases ainf : a.isInf <;> by_cases azero : a.isZero
+    ·{
+      simp [ainf,DecodedFloat.dfSign]
+    }
+    ·{
+      simp [ainf,DecodedFloat.dfSign]
+    }
+    ·{
+      simp [ainf,azero]
+      simp [DecodedFloat.dfSign]
+    }
+    ·{
+      simp [ainf,azero]
+      simp [DecodedFloat.dfSign]
+    }
+  have bsign_eq : b.sign = (b.decode.dfSign) := by
+    simp [decode, hnb]
+    by_cases binf : b.isInf <;> by_cases bzero : b.isZero
+    ·{
+      simp [binf,DecodedFloat.dfSign]
+    }
+    ·{
+      simp [binf,DecodedFloat.dfSign]
+    }
+    ·{
+      simp [binf,DecodedFloat.dfSign,bzero]
+    }
+    ·{
+      simp [binf,DecodedFloat.dfSign,bzero]
+    }
+  simp only [fadd, faddEx, addExact]
+  split
+  · -- a decodes to nan: contradiction with hna
+    rename_i heq
+    simp [decode, hna] at heq
+    by_cases ainf : a.isInf <;> by_cases azero : a.isZero <;> simp_all
+  · -- b decodes to nan: contradiction with hnb
+    rename_i heq _
+    simp [decode, hnb] at heq
+    by_cases binf : b.isInf <;> by_cases bzero : b.isZero <;> simp_all
+  · -- inf + inf
+    rename_i sa sb heqa heqb
+    have hsa : sa = s := by
+      have := asign; simp [decode, hna] at heqa
+      by_cases ainf : a.isInf <;> by_cases azero : a.isZero <;> simp_all
+    have hsb : sb = s := by
+      have := bsign_eq; simp [decode, hnb] at heqb
+      by_cases binf : b.isInf <;> by_cases bzero : b.isZero <;> simp_all
+    subst hsa; subst hsb
+    simp
+    simp [roundTo]
+    simp [encode]
+    simp [pack]
+    simp [sign]
+    by_cases hsb : sb
+    ·{
+      simp [hsb]
+    }
+    ·{
+      simp [hsb]
+    }
+  · -- inf + finite
+    rename_i sa ss heqa heqb _
+    simp [roundTo]
+    simp [encode]
+    simp [decode] at heqa
+    simp [hna] at heqa
+    have hsa : sa = s := by
+      by_cases ainf : a.isInf <;> by_cases azero : a.isZero <;> simp_all
+    subst hsa
+    simp [roundTo, encode, pack, sign]
+  · -- finite + inf
+    rename_i ss sb heqb heqa _
+    have hsb : sb = s := by
+      simp [decode, hnb] at heqb
+      by_cases binf : b.isInf <;> by_cases bzero : b.isZero <;> simp_all
+    subst hsb
+    simp [roundTo, encode, pack, sign]
+  · -- finite + finite
+    rename_i sa ea siga sb eb sigb heqa heqb
+    have hsa : sa = s := by
+      simp [decode, hna] at heqa
+      by_cases ainf : a.isInf <;> by_cases azero : a.isZero <;> simp_all
+    have hsb : sb = s := by
+      simp [decode, hnb] at heqb
+      by_cases binf : b.isInf <;> by_cases bzero : b.isZero <;> simp_all
+    subst hsa; subst hsb
+    -- Both signs are s, so result sign is s
+    simp only [roundTo, encode, pack, sign]
+    -- Handle the zero case: if subtraction cancels, sign depends on rm
+    by_cases hzero : (fadd rm a b).isZero
+    · contradiction
+    · -- non-zero result preserves sign s
+      simp_all [roundTo, encode, pack, sign]
+
+
+theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
+    (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
+    (ha : a.sign = s) (hb : b.sign = s)
+    (hr  : ¬(F32.fadd rm a b).isNaN)
+    (hrz : ¬(F32.fadd rm a b).isZero) :
+    (F32.fadd rm a b).sign = s := by
     simp [fadd]; simp [faddEx]; simp [addExact]
     split
     ·{
@@ -763,7 +868,7 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
         simp [ainf] at aheq
       }
       ·{
-        have addNan : (fadd rm a b).isNaN = true := by
+        have addZero : (fadd rm a b).isZero = true := by
           simp [fadd]; simp [faddEx]; simp [addExact]
           simp_all
           simp [roundTo]
@@ -777,9 +882,217 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
           by_cases hsbeq : (sigb = siga)
           ·{
             simp [hsbeq]
-            simp_all
+            rw [ha]
+            cases roundingM: rm
+            ·{
+               have rne_neq_rdn :  ¬(RoundMode.RNE == RoundMode.RDN)  := by decide
+               simp [rne_neq_rdn]
+               rw[← aheql]
+               rw [← aheqm]
+               rw [← aheqr]
+               simp_all
+               rw [← aheqr ]
+               simp [isZero]
+               simp [expIsZero]
+               simp [expRaw]
+               simp [mantIsZero]
+               simp [pack]
+               split <;>
+               ·{
+                  native_decide
+               }
+            }
+            ·{
+              have rne_rtz_rnd : ¬ (RoundMode.RTZ == RoundMode.RDN) := by decide
+              simp [rne_rtz_rnd]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+                native_decide
+            }
+            ·{
+              have rne_rtz_rnd : ¬ (RoundMode.RTZ == RoundMode.RNE) := by decide
+              simp
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
+            ·{
+              have rne_rup_rdn : ¬ (RoundMode.RUP == RoundMode.RDN) := by decide
+              simp [rne_rup_rdn]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
+            ·{
+              have rne_rmm_rdn : ¬ (RoundMode.RMM == RoundMode.RDN) := by decide
+              simp [rne_rmm_rdn]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
+            ·{
+              have rne_rdyn_rdn : ¬ (RoundMode.DYN == RoundMode.RDN) := by decide
+              simp [rne_rdyn_rdn]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
           }
-          native_decide
+          ·{
+            rw [ha]
+            cases roundingM: rm
+            ·{
+              have rne_neq_rdn :  ¬(RoundMode.RNE == RoundMode.RDN)  := by decide
+              simp [rne_neq_rdn]
+              simp [hsbeq]
+              rw [← aheql]
+              split
+              ·{
+                simp_all
+              }
+
+
+              rw[← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              ·{
+                 native_decide
+              }
+            }
+            ·{
+              have rne_rtz_rnd : ¬ (RoundMode.RTZ == RoundMode.RDN) := by decide
+              simp [rne_rtz_rnd]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+                native_decide
+            }
+            ·{
+              have rne_rtz_rnd : ¬ (RoundMode.RTZ == RoundMode.RNE) := by decide
+              simp [rne_rtz_rnd]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
+            ·{
+              have rne_rup_rdn : ¬ (RoundMode.RUP == RoundMode.RDN) := by decide
+              simp [rne_rup_rdn]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
+            ·{
+              have rne_rmm_rdn : ¬ (RoundMode.RMM == RoundMode.RDN) := by decide
+              simp [rne_rmm_rdn]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
+            ·{
+              have rne_rdyn_rdn : ¬ (RoundMode.DYN == RoundMode.RDN) := by decide
+              simp [rne_rdyn_rdn]
+              rw [← aheql]
+              rw [← aheqm]
+              rw [← aheqr]
+              simp_all
+              rw [← aheqr ]
+              simp [isZero]
+              simp [expIsZero]
+              simp [expRaw]
+              simp [mantIsZero]
+              simp [pack]
+              split <;>
+              native_decide
+            }
+          }
         contradiction
       }
       ·{
@@ -871,14 +1184,14 @@ theorem feq_nan_r (a b : F32) (h : b.isNaN) : F32.feq a b = false := by
 
 private theorem negate_mantissa (f : F32) : f.negate.mantissa = f.mantissa := by
   simp only [negate, mantissa, BitVec.truncate_eq_setWidth, BitVec.setWidth_xor]
-  have : ((1 <<< 31 : BitVec 32)).setWidth 23 = 0 := by decide
-  simp [this]
+  have hh : ((1 <<< 31 : BitVec 32)).setWidth 23 = 0 := by decide
+  simp
 
 private theorem negate_expRaw' (f : F32) : f.negate.expRaw = f.expRaw := by
   simp only [negate, expRaw, BitVec.truncate_eq_setWidth,
              BitVec.ushiftRight_xor_distrib, BitVec.setWidth_xor]
   have : (((1 <<< 31 : BitVec 32)) >>> 23).setWidth 8 = 0 := by decide
-  simp [this]
+  simp
 
 private theorem negate_isNaN' (f : F32) : f.negate.isNaN = f.isNaN := by
   simp [isNaN, expIsMax, mantIsZero, negate_expRaw', negate_mantissa]
@@ -941,18 +1254,80 @@ theorem fsub_self_isZero (rm : RoundMode) (a : F32) (h : ¬a.isNaN) (hi : ¬a.is
     exact encode_zero_isZero s₀ 0
 
 /-- +0 is a right additive identity under IEEE equality (for non-NaN a). -/
+theorem bit_vec_mod_power (f: BitVec n) : f.toNat % 2^n = 0 → f.toNat = 0 := by
+    intro h
+    have h0 : f.toNat < 2^n := isLt f
+    have hzero : f.toNat = 0 := by rwa [Nat.mod_eq_of_lt h0] at h
+    exact hzero
+
 theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
     F32.feq (F32.fadd rm a F32.posZero) a := by
+    have hpacka: pack a.sign a.expRaw a.mantissa = a := by exact pack_sign_expRaw_mantissa a
     cases ha: classify a
-    · -- zero
+    ·{ -- zero
       have haz : a.isZero = true := (biject_class_zero _).mpr ha
       have hnan : a.isNaN = false := isNaN_false_of_isZero a haz
       have hinf : a.isInf = false := isInf_false_of_isZero a  haz
       have hnanpos : posZero.isNaN = false := by native_decide
       have hzeropos : posZero.isZero = true := by native_decide
       have hsignpos : posZero.sign = false := by native_decide
-      simp [feq, fadd, faddEx, addExact, decode, hnan, haz, hinf, hnanpos, hzeropos, hsignpos, roundTo, encode, isZero, pack]
-    · -- subnormal
+      have poszeroinf: posZero.isInf = false := by native_decide
+      simp [feq]
+      simp [fadd]
+      simp [faddEx]
+      simp [addExact]
+      simp[ decode]
+      simp[ hnan, haz, hinf, hnanpos, hzeropos, hsignpos,poszeroinf]
+      by_cases hasign: a.sign
+      ·{
+        simp [hasign]
+        simp [roundTo]
+        simp [encode]
+        by_cases roundingM : rm == RoundMode.RDN <;>
+        ·{
+          simp [roundingM]
+          simp [pack]
+          constructor
+          ·{
+            simp [isNaN]
+            intro hh
+            simp [mantIsZero]
+            simp [mantissa]
+          }
+          ·{
+            simp [isZero]
+            simp [expIsZero]
+            simp [mantIsZero]
+            simp [expRaw]
+            simp [mantissa]
+          }
+        }
+      }
+      ·{
+        simp [hasign]
+        simp [roundTo]
+        simp [encode]
+        by_cases roundingM : rm == RoundMode.RDN <;>
+        ·{
+          simp [pack]
+          constructor
+          ·{
+            simp [isNaN]
+            intro hh
+            simp [mantIsZero]
+            simp [mantissa]
+          }
+          ·{
+            simp [isZero]
+            simp [expIsZero]
+            simp [mantIsZero]
+            simp [expRaw]
+            simp [mantissa]
+          }
+        }
+      }
+    }
+    ·{ -- subnormal
       have hsub : a.isSubnormal = true := (biject_class_subnormal _).mpr ha
       have hnan : a.isNaN = false := isNaN_false_of_isSubnormal a hsub
       have hzero : a.isZero = false := isZero_false_of_isSubnormal a hsub
@@ -961,46 +1336,105 @@ theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
       have hnanpos : posZero.isNaN = false := by native_decide
       have hzeropos : posZero.isZero = true := by native_decide
       have hsignpos : posZero.sign = false := by native_decide
+      have poszeroinf: posZero.isInf = false := by native_decide
+      have significand_nonzero : a.significand.toNat ≠ 0 := by
+        intro ab
+        simp [isZero] at hzero
+        simp [isSubnormal] at hsub
+        obtain ⟨ hsubl,hsubr⟩ := hsub
+        simp [hsubl] at hzero
+        simp [significand] at ab
+        simp [hnorm] at ab
+        have hmantissa_zero : a.mantissa.toNat = 0 := by
+          rw [bit_vec_mod_power]
+          have two_power_23 : 2^24 = 16777216 := by decide
+          have hmantissa_23: a.mantissa.toNat % 2^23 = 0 := by grind
+          exact hmantissa_23
+        simp [mantIsZero] at hsubr
+        grind
+      have := hsub; simp [isSubnormal] at this
       have h_fadd_eq_a : F32.fadd rm a posZero = a := by
-        simp [fadd, faddEx, addExact, decode, hnan, hzero, hinf, hnanpos, hzeropos, hsignpos, roundTo, encode]
+        simp [fadd, faddEx, addExact, decode, hnan, hzero, hinf, hnorm, hnanpos, hzeropos, hsignpos, roundTo, encode,poszeroinf]
         simp_all
-        simpa using encode_decode_subnormal hsub
-      simp [feq, h_fadd_eq_a, h]
-    · -- normal
+      simp_all
+      simp [feq]
+      exact hnan
+      }
+    ·{ -- normal
       have hnorm : a.isNormal = true := (biject_class_normal _).mpr ha
       have hnan : a.isNaN = false := isNaN_false_of_isNormal a hnorm
       have hzero : a.isZero = false := isZero_false_of_isNormal a hnorm
       have hinf : a.isInf = false := isInf_false_of_isNormal a hnorm
+      have hsub : a.isSubnormal = false := isSubnormal_false_of_isNormal a hnorm
       have hnanpos : posZero.isNaN = false := by native_decide
       have hzeropos : posZero.isZero = true := by native_decide
       have hsignpos : posZero.sign = false := by native_decide
+      have poszeroinf : posZero.isInf = false := by native_decide
+      simp [fadd]
+      simp [faddEx]
+      simp [addExact]
+      simp [decode]
+      simp [hnan,hinf,hnorm,hzero,hnanpos,poszeroinf,hzeropos]
+      by_cases hsignificandz: a.significand.toNat = 0
+      ·{
+        simp_all
+        simp [roundTo]
+        simp [encode]
+        simp [pack]
+        simp [isNormal] at hnorm
+
+      }
+      have significand_nonzero : a.significand.toNat ≠ 0 := by
+        intro ab
+        simp [isZero] at hzero
+        simp [isSubnormal] at hsub
+        by_cases aexpz : a.expIsZero
+        ·{
+          simp [aexpz] at hzero hsub
+          rw [hzero] at hsub
+          contradiction
+        }
+        ·{
+          simp_all
+        }
       have h_fadd_eq_a : F32.fadd rm a posZero = a := by
         simp [fadd, faddEx, addExact, decode, hnan, hzero, hinf, hnorm, hnanpos, hzeropos, hsignpos, roundTo, encode]
+        simp [poszeroinf]
+
         simpa using encode_decode_normal hnorm
       simp [feq, h_fadd_eq_a, h]
-    · -- inf
+    }
+    ·{ -- inf
       have hinf : a.isInf = true := (biject_class_inf _).mpr ha
       have hnan : a.isNaN = false := isNaN_false_of_isInf a hinf
       have hzero : a.isZero = false := isZero_false_of_isInf a hinf
+      have hnorm : a.isNormal = false := isNormal_false_of_isInf a hinf
+      have hsubnorm : a.isSubnormal = false := isSubnormal_false_of_isInf a hinf
       have hnanpos : posZero.isNaN = false := by native_decide
       have hzeropos : posZero.isZero = true := by native_decide
       have hsignpos : posZero.sign = false := by native_decide
+      have poszeroinf : posZero.isInf = false := by native_decide
+
       have h_fadd_eq_a : F32.fadd rm a posZero = a := by
-        simp [fadd, faddEx, addExact, decode, hnan, hinf, hzero, hnanpos, hzeropos, hsignpos, roundTo, encode]
+        simp [fadd, faddEx, addExact, decode, hnan, hinf, poszeroinf, hnanpos, hzeropos, hsignpos, roundTo, encode]
+        simp_all
         have h_emax : a.expIsMax := by
           have := hinf; simp [isInf] at this; exact this.1
         have h_mzero : a.mantIsZero := by
           have := hinf; simp [isInf] at this; exact this.2
+
         have hexp : a.expRaw = expMax 8 23 := by
           simpa [expIsMax] using h_emax
         have hman : a.mantissa = 0 := by
           simpa [mantIsZero] using h_mzero
         simp [hexp, hman, F32.pack_sign_expRaw_mantissa]
       simp [feq, h_fadd_eq_a, h]
-    · -- nan → impossible
+    }
+    ·{ -- nan → impossible
       exfalso; exact h ((biject_class_nan _).mpr ha)
+    }
 
--- ── I. FMA: true single rounding ──────────────────────────────────────────────
+  -- ── I. FMA: true single rounding ──────────────────────────────────────────────
 
 theorem fma_is_single_rounded (rm : RoundMode) (a b c : F32) :
     F32.fma rm a b c = (F32.fmaEx rm a b c).1 := rfl
@@ -1143,14 +1577,15 @@ theorem fsqrt_nonneg (rm : RoundMode) (a : F32) (h : ¬(F32.fsqrt rm a).isNaN) (
 a.sign = false) :
     (F32.fsqrt rm a).sign = false := by
   have hnan : a.isNaN = false := by
-    by_contra hnn
-    push_neg at hnn
-    simp at h
-    simp [fsqrt] at h; simp [fsqrtEx] at h; simp [sqrtExact] at h
-    have adnan: a.decode = DecodedFloat.nan := by simp [decode, hnn]
-    simp [adnan] at h; simp [roundTo] at h; simp [encode] at h
-    simp [qNaN] at h; simp [pack] at h; simp [isNaN] at h
-    simp [expIsMax, mantIsZero] at h; simp [expRaw] at h; simp [mantissa] at h
+    by_cases hnn : a.isNaN
+    ·{
+      have hfsqrt_nan : (F32.fsqrt rm a).isNaN = true := fsqrt_nan rm a hnn
+      contradiction
+    }
+    ·{
+      simp at hnn
+      exact hnn
+    }
   simp only [F32.fsqrt, fsqrtEx]
   have decode_sign : (decode a).dfSign = false := by
     simp only [decode, hnan, anNeg]

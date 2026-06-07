@@ -116,13 +116,7 @@ sig = mantissa_field   (no implicit leading 1)
 
 ## File Structure
 
-The project ships two parallel targets:
-
-### Monolithic target: `IEEE754`
-
-```
-IEEE754.lean            (3568 lines — original, untouched)
-```
+The project ships one modular target (the monolithic `IEEE754.lean` from earlier development is preserved in `legacy/` for reference but is no longer built):
 
 ### Modular target: `IEEE754Modular`
 
@@ -516,13 +510,10 @@ result = lib.f64_add(0x3FF0000000000000, 0x3FF0000000000000, 0)  # 1.0 + 1.0 = 2
 ### Build
 
 ```bash
-# Build the monolithic target (original IEEE754.lean)
-lake build IEEE754
-
 # Build the modular target
 lake build IEEE754Modular
 
-# Build both
+# Build (default target)
 lake build
 
 # Check a single file
@@ -642,12 +633,15 @@ No Mathlib dependency.
 IEEE754/
 ├── .gitignore
 ├── README.md
-├── lakefile.toml              ← Lake build config (two lib targets)
+├── lakefile.toml              ← Lake build config (one lib target)
 ├── lake-manifest.json         ← pinned dependency versions
 ├── lean-toolchain             ← pinned Lean version
 ├── LICENSE
-├── IEEE754.lean               ← monolithic original (§1–§12, untouched)
 ├── IEEE754Modular.lean        ← modular entry point
+├── legacy/                    ← historical reference (not built)
+│   ├── IEEE754.lean           ← monolithic original (§1–§12, untouched)
+│   └── IEE754Theorems.lean    ← orphan (broken `import IEEE754.IEEE754`)
+├── module.lean                ← unrelated project (mod-2^32-1 verification)
 └── IEEE754/
     ├── Basic.lean             ← §1–3.5  types, flags, FPFormat
     ├── ExactOps.lean          ← §4–5    exact arithmetic + roundTo

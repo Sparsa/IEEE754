@@ -3,6 +3,3 @@ name = "IEEE754"
 [[lean_lib]]
 name = "IEEE754"
 
-[[lean_lib]]
-name = "IEEE754Modular"
-

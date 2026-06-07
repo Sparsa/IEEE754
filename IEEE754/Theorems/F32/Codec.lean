@@ -522,5 +522,81 @@ theorem encode_zero_isZero (s : Bool) (e : Int) :
     cases s
     · simp; decide
     · decide
-
+theorem encode_dfSign (df : DecodedFloat) :
+  (encode df).sign = df.dfSign := by
+  cases df
+  ·{
+    simp [encode]
+    split
+    ·{
+      contradiction
+    }
+    ·{
+      contradiction
+    }
+    ·{
+      simp_all
+      simp [sign, DecodedFloat.dfSign]
+      simp [pack]
+      split <;>
+      ·{
+        simp_all
+      }
+    }
+    ·{
+      simp_all
+      split
+      ·{
+        simp [pack]
+        split <;>
+        ·{
+          simp [sign,DecodedFloat.dfSign]
+          simp_all
+        }
+      }
+      ·{
+        simp [pack]
+        split
+        ·{
+          split
+          ·{
+            simp [sign,DecodedFloat.dfSign]
+            simp [negInf]
+            simp [pack]
+            simp_all
+          }
+          ·{
+            simp [posInf]
+            simp [pack]
+            simp [sign]
+            simp [DecodedFloat.dfSign]
+            simp_all
+          }
+        }
+        ·{
+          split <;>
+          ·{
+            simp [sign,DecodedFloat.dfSign]
+            simp_all
+          }
+        }
+      }
+    }
+  }
+  ·{
+    simp [encode]
+    simp [sign, DecodedFloat.dfSign]
+    simp [pack]
+    split <;>
+    ·{
+      simp_all
+    }
+  }
+  ·{
+    simp [encode]
+    simp [qNaN]
+    simp [sign]
+    simp [pack]
+    simp [DecodedFloat.dfSign]
+  }
 end F32

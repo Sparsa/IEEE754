@@ -1,0 +1,6 @@
+# Ignore editor and CLI metadata
+.history/
+.antigravitycli/
+
+# Ignore agent workflow instructions and rules
+.agents/

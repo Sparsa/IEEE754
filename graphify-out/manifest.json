@@ -1,0 +1,132 @@
+{
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEE754Theorems.lean": {
+    "mtime": 1779953316.052274,
+    "ast_hash": "a7afc285ad06411cad6327e3c36ac050",
+    "semantic_hash": "a7afc285ad06411cad6327e3c36ac050"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754.lean": {
+    "mtime": 1779953316.055274,
+    "ast_hash": "383e77825b79846a6192c0133fd836d0",
+    "semantic_hash": "383e77825b79846a6192c0133fd836d0"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/module.lean": {
+    "mtime": 1779953316.0602741,
+    "ast_hash": "73c393a5570e9963f20d99bf16d169ea",
+    "semantic_hash": "73c393a5570e9963f20d99bf16d169ea"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/lake-manifest.json": {
+    "mtime": 1779953659.4417667,
+    "ast_hash": "ff6e3594dd085d4f5cb4c1e2706d7157",
+    "semantic_hash": "ff6e3594dd085d4f5cb4c1e2706d7157"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754Modular.lean": {
+    "mtime": 1780127814.7708423,
+    "ast_hash": "e696e1e80e8a5f3843f25fca7126f88b",
+    "semantic_hash": "e696e1e80e8a5f3843f25fca7126f88b"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Basic.lean": {
+    "mtime": 1779953316.055274,
+    "ast_hash": "9a3aced7dde8d8b339c26fbc559d9b8e",
+    "semantic_hash": "9a3aced7dde8d8b339c26fbc559d9b8e"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Conversions.lean": {
+    "mtime": 1779953316.0562742,
+    "ast_hash": "68a20b9942b5952d7ac1e7e4a55622c9",
+    "semantic_hash": "68a20b9942b5952d7ac1e7e4a55622c9"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/ExactOps.lean": {
+    "mtime": 1779953316.0562742,
+    "ast_hash": "f991c60e6debb8d0da169b61f3dd441a",
+    "semantic_hash": "f991c60e6debb8d0da169b61f3dd441a"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Oracle.lean": {
+    "mtime": 1780127814.7694762,
+    "ast_hash": "e57dcec9c868353b420aae7bd24efa3f",
+    "semantic_hash": "e57dcec9c868353b420aae7bd24efa3f"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/F32/Defs.lean": {
+    "mtime": 1779953316.0562742,
+    "ast_hash": "12a0943fad85f13d3b30f8d301face5c",
+    "semantic_hash": "12a0943fad85f13d3b30f8d301face5c"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/F64/Defs.lean": {
+    "mtime": 1780127814.7689233,
+    "ast_hash": "80cf94d9e091551be7c41520f42214e3",
+    "semantic_hash": "80cf94d9e091551be7c41520f42214e3"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F32/Classification.lean": {
+    "mtime": 1780127814.7696364,
+    "ast_hash": "3221bb730d4d91b03e27f65dccc76b5c",
+    "semantic_hash": "3221bb730d4d91b03e27f65dccc76b5c"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F32/Codec.lean": {
+    "mtime": 1780127814.7697868,
+    "ast_hash": "46d7464d2b2ba2029f1a188080d33f15",
+    "semantic_hash": "46d7464d2b2ba2029f1a188080d33f15"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F32/Inf.lean": {
+    "mtime": 1780127814.7697868,
+    "ast_hash": "4f4a18bfffb0242e1ae7cdcb61cc70b1",
+    "semantic_hash": "4f4a18bfffb0242e1ae7cdcb61cc70b1"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F32/NaN.lean": {
+    "mtime": 1780127814.7697868,
+    "ast_hash": "b239cd4fa7be15dab218a120f7701240",
+    "semantic_hash": "b239cd4fa7be15dab218a120f7701240"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F32/Props.lean": {
+    "mtime": 1780127814.7697868,
+    "ast_hash": "d247b1ac0577cba0e567d93cbf0774dc",
+    "semantic_hash": "d247b1ac0577cba0e567d93cbf0774dc"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F32/Sign.lean": {
+    "mtime": 1780138203.8130136,
+    "ast_hash": "f34f9c6fa80a89061aed1a5e5a907183",
+    "semantic_hash": "f34f9c6fa80a89061aed1a5e5a907183"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F64/Classification.lean": {
+    "mtime": 1780127814.7699234,
+    "ast_hash": "4d30fb52c53e2317b76fae116deb4dca",
+    "semantic_hash": "4d30fb52c53e2317b76fae116deb4dca"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F64/Codec.lean": {
+    "mtime": 1780127814.770433,
+    "ast_hash": "b8f8fb46ffdd69139bde9b9065e0d224",
+    "semantic_hash": "b8f8fb46ffdd69139bde9b9065e0d224"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F64/Inf.lean": {
+    "mtime": 1780127814.770433,
+    "ast_hash": "ffef029e85eb27836c2c5e8863100800",
+    "semantic_hash": "ffef029e85eb27836c2c5e8863100800"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F64/NaN.lean": {
+    "mtime": 1780127814.770692,
+    "ast_hash": "48f7690c297cbd7151a3c2c61fbbae30",
+    "semantic_hash": "48f7690c297cbd7151a3c2c61fbbae30"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/IEEE754/Theorems/F64/Sign.lean": {
+    "mtime": 1780127814.7708423,
+    "ast_hash": "f96071485717a666d7485e284226028c",
+    "semantic_hash": "f96071485717a666d7485e284226028c"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/README.md": {
+    "mtime": 1780329507.414355,
+    "ast_hash": "094ff62c5ce1d5cf5c3d18c8e05ffa5f",
+    "semantic_hash": "094ff62c5ce1d5cf5c3d18c8e05ffa5f"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/.opencode/opencode.json": {
+    "mtime": 1780147469.9464703,
+    "ast_hash": "e5f74d14a81702b55bdf53b33ec991d7",
+    "semantic_hash": "e5f74d14a81702b55bdf53b33ec991d7"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/.opencode/package.json": {
+    "mtime": 1780147476.7984989,
+    "ast_hash": "878115d31c721840fc3330b89a3f8c20",
+    "semantic_hash": "878115d31c721840fc3330b89a3f8c20"
+  },
+  "/home/sparsaro/Projects/LEAN/IEEE754/.opencode/plugins/graphify.js": {
+    "mtime": 1780147460.8040326,
+    "ast_hash": "64ccd3c03dbfe0980b6095766f5c4e52",
+    "semantic_hash": "64ccd3c03dbfe0980b6095766f5c4e52"
+  }
+}

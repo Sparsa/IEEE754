@@ -1,0 +1,609 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "lake-manifest.json",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": "L1",
+      "community": 1,
+      "norm_label": "lake-manifest.json",
+      "id": "lake_manifest_json"
+    },
+    {
+      "label": "version",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": "L1",
+      "community": 1,
+      "norm_label": "version",
+      "id": "ieee754_lake_manifest_version"
+    },
+    {
+      "label": "packagesDir",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": "L2",
+      "community": 1,
+      "norm_label": "packagesdir",
+      "id": "ieee754_lake_manifest_packagesdir"
+    },
+    {
+      "label": "packages",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": "L3",
+      "community": 1,
+      "norm_label": "packages",
+      "id": "ieee754_lake_manifest_packages"
+    },
+    {
+      "label": "name",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": "L4",
+      "community": 1,
+      "norm_label": "name",
+      "id": "ieee754_lake_manifest_name"
+    },
+    {
+      "label": "lakeDir",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": "L5",
+      "community": 1,
+      "norm_label": "lakedir",
+      "id": "ieee754_lake_manifest_lakedir"
+    },
+    {
+      "label": "fixedToolchain",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": "L6",
+      "community": 1,
+      "norm_label": "fixedtoolchain",
+      "id": "ieee754_lake_manifest_fixedtoolchain"
+    },
+    {
+      "label": "opencode.json",
+      "file_type": "code",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L1",
+      "community": 3,
+      "norm_label": "opencode.json",
+      "id": "opencode_opencode_json"
+    },
+    {
+      "label": "$schema",
+      "file_type": "code",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L2",
+      "community": 3,
+      "norm_label": "$schema",
+      "id": "opencode_opencode_schema"
+    },
+    {
+      "label": "plugin",
+      "file_type": "code",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L3",
+      "community": 3,
+      "norm_label": "plugin",
+      "id": "opencode_opencode_plugin"
+    },
+    {
+      "label": "package.json",
+      "file_type": "code",
+      "source_file": ".opencode/package.json",
+      "source_location": "L1",
+      "community": 4,
+      "norm_label": "package.json",
+      "id": "opencode_package_json"
+    },
+    {
+      "label": "dependencies",
+      "file_type": "code",
+      "source_file": ".opencode/package.json",
+      "source_location": "L2",
+      "community": 4,
+      "norm_label": "dependencies",
+      "id": "opencode_package_dependencies"
+    },
+    {
+      "label": "@opencode-ai/plugin",
+      "file_type": "code",
+      "source_file": ".opencode/package.json",
+      "source_location": "L3",
+      "community": 4,
+      "norm_label": "@opencode-ai/plugin",
+      "id": "opencode_package_dependencies_opencode_ai_plugin"
+    },
+    {
+      "label": "graphify.js",
+      "file_type": "code",
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": "L1",
+      "community": 6,
+      "norm_label": "graphify.js",
+      "id": "opencode_plugins_graphify_js"
+    },
+    {
+      "label": "GraphifyPlugin()",
+      "file_type": "code",
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": "L6",
+      "community": 6,
+      "norm_label": "graphifyplugin()",
+      "id": "plugins_graphify_graphifyplugin"
+    },
+    {
+      "label": "lake-manifest.json",
+      "file_type": "code",
+      "source_file": "lake-manifest.json",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 7,
+      "norm_label": "lake-manifest.json",
+      "id": "ieee754_lake_manifest_file"
+    },
+    {
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 8,
+      "norm_label": "readme.md",
+      "id": "ieee754_readme_file"
+    },
+    {
+      "label": "OpenCode Configuration",
+      "file_type": "code",
+      "source_file": ".opencode/opencode.json",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "opencode configuration",
+      "id": "opencode_config"
+    },
+    {
+      "label": "Package Dependencies",
+      "file_type": "code",
+      "source_file": ".opencode/package.json",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "package dependencies",
+      "id": "package_dependencies"
+    },
+    {
+      "label": "@opencode-ai/plugin API",
+      "file_type": "code",
+      "source_file": ".opencode/package.json",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "@opencode-ai/plugin api",
+      "id": "opencode_plugin_api"
+    },
+    {
+      "label": "Graphify OpenCode Plugin",
+      "file_type": "code",
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "graphify opencode plugin",
+      "id": "graphify_plugin"
+    },
+    {
+      "label": "Knowledge Graph CLI Reminder",
+      "file_type": "code",
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "knowledge graph cli reminder",
+      "id": "knowledge_graph_reminder"
+    },
+    {
+      "label": "Bash Tool Execution Hook",
+      "file_type": "code",
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 2,
+      "norm_label": "bash tool execution hook",
+      "id": "bash_tool_hook"
+    },
+    {
+      "label": "IEEE 754-2019 Formal Verification",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "ieee 754-2019 formal verification",
+      "id": "ieee754_formal_verification"
+    },
+    {
+      "label": "F32 (BitVec 32)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "f32 (bitvec 32)",
+      "id": "f32_abbrev"
+    },
+    {
+      "label": "F64 (BitVec 64)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "f64 (bitvec 64)",
+      "id": "f64_abbrev"
+    },
+    {
+      "label": "DecodedFloat",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "decodedfloat",
+      "id": "decoded_float"
+    },
+    {
+      "label": "decode-exactOp-round-encode Pipeline",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 5,
+      "norm_label": "decode-exactop-round-encode pipeline",
+      "id": "decode_encode_pipeline"
+    },
+    {
+      "label": "Exact Arithmetic Operations",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 5,
+      "norm_label": "exact arithmetic operations",
+      "id": "exact_arithmetic_ops"
+    },
+    {
+      "label": "Rounding Modes (RNE, RTZ, RDN, RUP, RMM, DYN)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "rounding modes (rne, rtz, rdn, rup, rmm, dyn)",
+      "id": "rounding_modes"
+    },
+    {
+      "label": "flt_trans proof (completed)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "flt_trans proof (completed)",
+      "id": "flt_trans_completed"
+    },
+    {
+      "label": "fadd_posZero_r proof (completed)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "fadd_poszero_r proof (completed)",
+      "id": "fadd_posZero_r_completed"
+    },
+    {
+      "label": "Hardware Oracle Interface (Python/ctypes)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "hardware oracle interface (python/ctypes)",
+      "id": "hardware_oracle_interface"
+    },
+    {
+      "label": "Remaining Proof Gaps (F64)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": null,
+      "community": 0,
+      "norm_label": "remaining proof gaps (f64)",
+      "id": "current_sorry_list"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lake-manifest.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lake_manifest_json",
+      "target": "ieee754_lake_manifest_fixedtoolchain"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lake-manifest.json",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lake_manifest_json",
+      "target": "ieee754_lake_manifest_lakedir"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lake-manifest.json",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lake_manifest_json",
+      "target": "ieee754_lake_manifest_name"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lake-manifest.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lake_manifest_json",
+      "target": "ieee754_lake_manifest_packages"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lake-manifest.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lake_manifest_json",
+      "target": "ieee754_lake_manifest_packagesdir"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lake-manifest.json",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lake_manifest_json",
+      "target": "ieee754_lake_manifest_version"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "opencode_opencode_json",
+      "target": "opencode_opencode_plugin"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "opencode_opencode_json",
+      "target": "opencode_opencode_schema"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/package.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "opencode_package_json",
+      "target": "opencode_package_dependencies"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/package.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "opencode_package_dependencies",
+      "target": "opencode_package_dependencies_opencode_ai_plugin"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "opencode_plugins_graphify_js",
+      "target": "plugins_graphify_graphifyplugin"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".opencode/opencode.json",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "opencode_config",
+      "target": "graphify_plugin"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".opencode/package.json",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "package_dependencies",
+      "target": "opencode_plugin_api"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "opencode_plugin_api",
+      "target": "graphify_plugin"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "graphify_plugin",
+      "target": "knowledge_graph_reminder"
+    },
+    {
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".opencode/plugins/graphify.js",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "knowledge_graph_reminder",
+      "target": "bash_tool_hook"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "current_sorry_list"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "decode_encode_pipeline"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "decoded_float"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "f32_abbrev"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "f64_abbrev"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "fadd_posZero_r_completed"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "flt_trans_completed"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "hardware_oracle_interface"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ieee754_formal_verification",
+      "target": "rounding_modes"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "decode_encode_pipeline",
+      "target": "exact_arithmetic_ops"
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "18760f5c39d54d7d046400dfd88778d601a72667"
+}

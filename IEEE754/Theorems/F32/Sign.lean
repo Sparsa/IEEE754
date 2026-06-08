@@ -177,19 +177,8 @@ private theorem sign_of_decode (a : F32) (hna : ¬a.isNaN) :
 
 
 
-/-- The product sign is XOR of operand signs (when result is not NaN).
-    TODO: complete proof. Sketch: the sign of `fmul rm a b` equals
-    `dfSign (mulExact (decode a) (decode b))` (via `encode_dfSign` and
-    `roundTo_sign_preserved` from Props.lean). Then for non-NaN, non-Zero
-    `a, b`, the result is `.inf (sa != sb)` or `.finite (sa != sb) _ _`,
-    with `sa = a.sign` and `sb = b.sign` (by unfolding `decode` and
-    case-splitting on `a.isInf` / `a.isZero`).  Currently `sorry`. -/
-theorem sign_dfsign {rm : RoundMode} {a b : F32}
-    (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
-    (hza : ¬a.isZero) (hzb : ¬b.isZero)
-    (hr  : ¬(F32.fmul rm a b).isNaN) :
+theorem sign_dfsign {rm : RoundMode} {a b : F32} :
     (fmul rm a b).sign = DecodedFloat.dfSign (mulExact (decode a) (decode b)).fst := by
-    simp_all
     simp [fmul]
     simp [fmulEx]
     simp [encode_dfSign]

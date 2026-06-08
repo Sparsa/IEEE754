@@ -195,78 +195,83 @@ theorem fmul_sign_xor {rm : RoundMode} {a b : F32}
     simp only [fmul, fmulEx, encode_dfSign, roundTo_sign_preserved]
   rw [h_mul]
   -- Now we need to show that ((mulExact (F32.decode a) (F32.decode b)).1).dfSign = (a.sign != b.sign)
-  match hda : F32.decode a, hdb : F32.decode b with
-  | .nan, _ => by
-      exfalso
-      have h₁ : a.isNaN := by
-        have h₂ : F32.decode a = .nan := by assumption
-        simp [decode, isNaN] at h₂
-        <;> aesop
-      exact hna h₁
-  | _, .nan => by
-      exfalso
-      have h₁ : b.isNaN := by
-        have h₂ : F32.decode b = .nan := by assumption
-        simp [decode, isNaN] at h₂
-        <;> aesop
-      exact hnb h₁
-  | .inf sa, .inf sb =>
-    have h₁ : ((mulExact (F32.decode a) (F32.decode b)).1).dfSign = (sa != sb) := by
-      simp [mulExact, hda, hdb]
-      <;> aesop
-    have h₂ : sa = a.sign := by
-      have h₃ : (F32.decode a).dfSign = sa := by simp [hda]
-      have h₄ : a.sign = (F32.decode a).dfSign := h_sign_a
-      linarith
-    have h₃ : sb = b.sign := by
-      have h₄ : (F32.decode b).dfSign = sb := by simp [hdb]
-      have h₅ : b.sign = (F32.decode b).dfSign := h_sign_b
-      linarith
-    rw [h₁, h₂, h₃]
-    <;> aesop
-  | .inf sa, .finite sb _ _ =>
-    have h₁ : ((mulExact (F32.decode a) (F32.decode b)).1).dfSign = (sa != sb) := by
-      simp [mulExact, hda, hdb]
-      <;> aesop
-    have h₂ : sa = a.sign := by
-      have h₃ : (F32.decode a).dfSign = sa := by simp [hda]
-      have h₄ : a.sign = (F32.decode a).dfSign := h_sign_a
-      linarith
-    have h₃ : sb = b.sign := by
-      have h₄ : (F32.decode b).dfSign = sb := by simp [hdb]
-      have h₅ : b.sign = (F32.decode b).dfSign := h_sign_b
-      linarith
-    rw [h₁, h₂, h₃]
-    <;> aesop
-  | .finite sa _ _, .inf sb =>
-    have h₁ : ((mulExact (F32.decode a) (F32.decode b)).1).dfSign = (sa != sb) := by
-      simp [mulExact, hda, hdb]
-      <;> aesop
-    have h₂ : sa = a.sign := by
-      have h₃ : (F32.decode a).dfSign = sa := by simp [hda]
-      have h₄ : a.sign = (F32.decode a).dfSign := h_sign_a
-      linarith
-    have h₃ : sb = b.sign := by
-      have h₄ : (F32.decode b).dfSign = sb := by simp [hdb]
-      have h₅ : b.sign = (F32.decode b).dfSign := h_sign_b
-      linarith
-    rw [h₁, h₂, h₃]
-    <;> aesop
-  | .finite sa _ _, .finite sb _ _ =>
-    have h₁ : ((mulExact (F32.decode a) (F32.decode b)).1).dfSign = (sa != sb) := by
-      simp [mulExact, hda, hdb]
-      <;> aesop
-    have h₂ : sa = a.sign := by
-      have h₃ : (F32.decode a).dfSign = sa := by simp [hda]
-      have h₄ : a.sign = (F32.decode a).dfSign := h_sign_a
-      linarith
-    have h₃ : sb = b.sign := by
-      have h₄ : (F32.decode b).dfSign = sb := by simp [hdb]
-      have h₅ : b.sign = (F32.decode b).dfSign := h_sign_b
-      linarith
-    rw [h₁, h₂, h₃]
-    <;> aesop
-/-- The quotient sign is XOR of operand signs (when result is not NaN). -/
+  simp [mulExact]
+  split
+  ·{
+    rename_i dfa dfb heq
+    simp [decode] at heq
+    simp_all
+    split at heq <;>
+    ·{
+      simp_all
+    }
+  }
+  ·{
+    rename_i dfa dfb heq heqb
+    simp [decode] at heq
+    simp_all
+    split at heq <;>
+    ·{
+      contradiction
+    }
+  }
+  ·{
+    rename_i dfa dfb signa signb expb heqa heqb
+    simp [fmul] at hr
+    simp [fmulEx] at hr
+    simp [heqa,heqb] at hr
+    simp [mulExact] at hr
+    simp [roundTo] at hr
+    simp [encode] at hr
+    contradiction
+  }
+  ·{
+    rename_i dfa dfb signa expa signb heqa heqb
+    simp [fmul] at hr
+    simp [fmulEx] at hr
+    simp [heqa,heqb] at hr
+    simp [mulExact] at hr
+    simp [roundTo] at hr
+    simp [encode] at hr
+    contradiction
+  }
+  ·{
+    simp
+    rename_i dfa dfb signa signb heqa heqb
+    rw [heqa] at h_sign_a
+    rw [heqb] at h_sign_b
+    simp [DecodedFloat.dfSign] at h_sign_a h_sign_b
+    rw [h_sign_a, h_sign_b]
+    simp [DecodedFloat.dfSign]
+  }
+  ·{
+    simp
+    rename_i dfa dfb signa signb expb sigb hh hqa hqb
+    rw [hqa] at h_sign_a
+    rw [hqb] at h_sign_b
+    simp [DecodedFloat.dfSign] at h_sign_a h_sign_b
+    rw [h_sign_a,h_sign_b]
+    simp [DecodedFloat.dfSign]
+  }
+  ·{
+    simp
+    rename_i dfa dfb signa expa signia signb hh hqa hqb
+    rw [hqa] at h_sign_a
+    rw [hqb] at h_sign_b
+    simp [DecodedFloat.dfSign] at h_sign_a h_sign_b
+    rw [h_sign_a, h_sign_b]
+    simp [DecodedFloat.dfSign]
+  }
+  ·{
+    simp
+    rename_i dfa dfb sa expa siga sb expb sigb hqa hqb
+    rw [hqa] at h_sign_a
+    rw [hqb] at h_sign_b
+    simp [DecodedFloat.dfSign] at h_sign_a h_sign_b
+    rw [h_sign_a,h_sign_b]
+    simp [DecodedFloat.dfSign]
+  }
+
 theorem fdiv_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
     (hza : ¬a.isZero) (hzb : ¬b.isZero)
@@ -525,9 +530,7 @@ theorem fdiv_sign_xor {rm : RoundMode} {a b : F32}
     reduce to the operand signs, then apply `ha` / `hb`.  Currently `sorry`. -/
 theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
-    (ha : a.sign = s) (hb : b.sign = s)
-    (hr  : ¬(F32.fadd rm a b).isNaN)
-    (hrz : ¬(F32.fadd rm a b).isZero) :
+    (ha : a.sign = s) (hb : b.sign = s) :
     (F32.fadd rm a b).sign = s := by
   have h_sign_a : a.sign = (F32.decode a).dfSign := sign_of_decode a hna
   have h_sign_b : b.sign = (F32.decode b).dfSign := sign_of_decode b hnb
@@ -694,50 +697,40 @@ theorem fadd_same_sign {rm : RoundMode} {a b : F32} {s : Bool}
           simp_all
         }
       }
-
-    rw [h₁]
-    simp at hnb
-
-    simp [hnb] at hdb
-    split at hdb
-    ·{
-      simp at hdb
-    }
+    simp [hda] at h_sign_a
+    simp [hdb] at h_sign_b
+    simp [DecodedFloat.dfSign] at h_sign_a h_sign_b
+    simp [ha,hb] at h_sign_a h_sign_b
+    rw [← h_sign_a,← h_sign_b]
+    simp [addExact]
+    simp [DecodedFloat.dfSign]
 
   | .finite sa _ _, .finite sb _ _ =>
-    have h₁ : ((addExact rm (F32.decode a) (F32.decode b)).1).dfSign = (if (sa &&& sb) || (¬sa &&& ¬sb) then true else false) := by
-      simp [addExact, hda, hdb]
-      <;> aesop
-    have h₂ : sa = a.sign := by
-      have h₃ : (F32.decode a).dfSign = sa := by simp [hda]
-      have h₄ : a.sign = (F32.decode a).dfSign := h_sign_a
-      linarith
-    have h₃ : sb = b.sign := by
-      have h₄ : (F32.decode b).dfSign = sb := by simp [hdb]
-      have h₅ : b.sign = (F32.decode b).dfSign := h_sign_b
-      linarith
-    have h₄ : s = true := by
-      have h₅ : a.sign = true := by
-        have h₆ : ha : a.sign = s := ha
-        have h₇ : s = true := by
-          by_contra h
-          have h₈ : s = false := by tauto
-          have h₉ : a.sign = false := by
-            rw [h₆] at h₇
-            exact h₇
-          have h₁₀ : ¬(a.sign = s) := by tauto
-          exact h₁₀ ha
-        have h₁₁ : a.sign = true := by tauto
-        exact h₁₁
-      linarith
-    have h₅ : (if (sa &&& sb) || (¬sa &&& ¬sb) then true else false) = true := by
-      by_cases h₆ : sa <;> by_cases h₇ : sb <;>
-      simp_all (try { contradiction }) <;> try { aesop }
-    have h₆ : s = true := by
-      have h₇ : a.sign = s := ha
-      linarith
-    rw [h₁, h₂, h₃, h₄, h₅, h₆]
-    <;> aesop
+    simp [hda] at h_sign_a
+    simp [hdb] at h_sign_b
+    simp [DecodedFloat.dfSign] at h_sign_a h_sign_b
+    simp [h_sign_a,h_sign_b] at ha hb
+    rw [ha,hb]
+    simp [addExact]
+    split
+    ·{
+      simp [DecodedFloat.dfSign]
+      intro htrue
+      intro round
+      exact htrue
+    }
+    ·{
+      split
+      ·{
+        simp [DecodedFloat.dfSign]
+      }
+      ·{
+        split <;>
+        ·{
+          simp [DecodedFloat.dfSign]
+        }
+      }
+    }
 
 -- ── F. Commutativity ──────────────────────────────────────────────────────────
 

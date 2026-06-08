@@ -44,6 +44,84 @@ private theorem encode_false_sign (d : DecodedFloat) (hs : d.dfSign = false) :
       · exact pack_sign_false _ _
   | .finite true _ _ => simp [DecodedFloat.dfSign] at hs
 
+theorem encode_dfSign (df : DecodedFloat) :
+  (encode df).sign = df.dfSign := by
+  cases df
+  ·{
+    simp [encode]
+    split
+    ·{
+      contradiction
+    }
+    ·{
+      contradiction
+    }
+    ·{
+      simp_all
+      simp [sign, DecodedFloat.dfSign]
+      simp [pack]
+      split <;>
+      ·{
+        simp_all
+      }
+    }
+    ·{
+      simp_all
+      split
+      ·{
+        simp [pack]
+        split <;>
+        ·{
+          simp [sign,DecodedFloat.dfSign]
+          simp_all
+        }
+      }
+      ·{
+        simp [pack]
+        split
+        ·{
+          split
+          ·{
+            simp [sign,DecodedFloat.dfSign]
+            simp [negInf]
+            simp [pack]
+            simp_all
+          }
+          ·{
+            simp [posInf]
+            simp [pack]
+            simp [sign]
+            simp [DecodedFloat.dfSign]
+            simp_all
+          }
+        }
+        ·{
+          split <;>
+          ·{
+            simp [sign,DecodedFloat.dfSign]
+            simp_all
+          }
+        }
+      }
+    }
+  }
+  ·{
+    simp [encode]
+    simp [sign, DecodedFloat.dfSign]
+    simp [pack]
+    split <;>
+    ·{
+      simp_all
+    }
+  }
+  ·{
+    simp [encode]
+    simp [qNaN]
+    simp [sign]
+    simp [pack]
+    simp [DecodedFloat.dfSign]
+  }
+
 private theorem encode_true_sign (d : DecodedFloat) (hs : d.dfSign = true) :
     (F32.encode d).sign = true := by
   match d with
@@ -70,93 +148,34 @@ private theorem sign_of_decode (a : F32) (hna : ¬a.isNaN) :
     have h1 : a.expRaw = 255#8 := by
       have h2 : a.isInf := hInf
       simp [isInf, expIsMax, mantIsZero] at h2
-      have h3 : a.expRaw == BitVec.allOnes 8 := by tauto
+      have h3 : a.expRaw == BitVec.allOnes 8 := by simp_all
       have h4 : (BitVec.allOnes 8 : BitVec 8) = 255#8 := by rfl
       have h5 : a.expRaw = 255#8 := by
         rw [h4] at h3
-        exact_mod_cast h3
+        simp_all
       exact h5
     have h2 : a.expRaw = 0 := by
       have h3 : a.isZero := hZero
       simp [isZero, expIsZero, mantIsZero] at h3
-      have h4 : a.expRaw == 0 := by tauto
+      have h4 : a.expRaw == 0 := by simp_all
       have h5 : a.expRaw = (0 : BitVec 8) := by
-        exact_mod_cast h4
+        simp_all
       exact h5
-    have h6 : (255 : ℕ) < 256 := by norm_num
-    have h7 : (0 : ℕ) < 256 := by norm_num
-    have h8 : a.expRaw < 256 := by
-      exact_mod_cast h6
-    have h9 : a.expRaw ≥ 256 := by
-      exact_mod_cast h7
-    linarith
+    simp_all
   · -- Case: a.isInf and not a.isZero
-    simp [decode, isNaN, isInf, isZero, expIsMax, expIsZero, mantIsZero,
-          expUnbiased, isNormal, isSubnormal, DecodedFloat.dfSign, hInf, hZero, h8]
-    <;>
-    (try { aesop }) <;>
-    (try {
-      norm_num at *
-      <;> aesop
-    }) <;>
-    (try {
-      -- If simp and aesop don't work, we try to use the fact that the dfSign of .inf s is s.
-      have h1 : a.sign = (a.decode).dfSign := by
-        have h2 : a.decode = .inf a.sign := by
-          have h3 : a.isInf := hInf
-          have h4 : ¬a.isNaN := hna
-          have h5 : ¬a.isZero := hZero
-          simp [decode, isNaN, isInf, isZero, expIsMax, expIsZero, mantIsZero,
-                expUnbiased, isNormal, isSubnormal] at h3 h4 h5
-          <;> aesop
-        rw [h2]
-        simp [DecodedFloat.dfSign]
-      exact h1
-    })
+    simp [decode]
+    simp_all
+    simp [DecodedFloat.dfSign]
   · -- Case: not a.isInf and a.isZero
-    simp [decode, isNaN, isInf, isZero, expIsMax, expIsZero, mantIsZero,
-          expUnbiased, isNormal, isSubnormal, DecodedFloat.dfSign, hInf, hZero, h8]
-    <;>
-    (try { aesop }) <;>
-    (try {
-      norm_num at *
-      <;> aesop
-    }) <;>
-    (try {
-      have h1 : a.sign = (a.decode).dfSign := by
-        have h2 : a.decode = .finite a.sign 0 0 := by
-          have h3 : ¬a.isInf := hInf
-          have h4 : ¬a.isNaN := hna
-          have h5 : a.isZero := hZero
-          simp [decode, isNaN, isInf, isZero, expIsMax, expIsZero, mantIsZero,
-                expUnbiased, isNormal, isSubnormal] at h3 h4 h5
-          <;> aesop
-        rw [h2]
-        simp [DecodedFloat.dfSign]
-      exact h1
-    })
+    simp [decode]
+    simp_all
+    simp [DecodedFloat.dfSign]
   · -- Case: not a.isInf and not a.isZero
-    simp [decode, isNaN, isInf, isZero, expIsMax, expIsZero, mantIsZero,
-          expUnbiased, isNormal, isSubnormal, DecodedFloat.dfSign, hInf, hZero, h8]
-    <;>
-    (try { aesop }) <;>
-    (try {
-      norm_num at *
-      <;> aesop
-    }) <;>
-    (try {
-      have h1 : a.sign = (a.decode).dfSign := by
-        have h2 : a.decode = .finite a.sign a.expUnbiased a.significand.toNat := by
-          have h3 : ¬a.isInf := hInf
-          have h4 : ¬a.isNaN := hna
-          have h5 : ¬a.isZero := hZero
-          simp [decode, isNaN, isInf, isZero, expIsMax, expIsZero, mantIsZero,
-                expUnbiased, isNormal, isSubnormal] at h3 h4 h5
-          <;> aesop
-        rw [h2]
-        simp [DecodedFloat.dfSign]
-      exact h1
-    })
+    simp [decode]
+    simp_all
+    simp [DecodedFloat.dfSign]
+
+
 
 /-- The product sign is XOR of operand signs (when result is not NaN).
     TODO: complete proof. Sketch: the sign of `fmul rm a b` equals
@@ -169,7 +188,12 @@ theorem sign_dfsign {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)
     (hza : ¬a.isZero) (hzb : ¬b.isZero)
     (hr  : ¬(F32.fmul rm a b).isNaN) :
-    (fmul rm a b).sign = DecodedFloat.dfSign (mulExact (decode a) (decode b)).fst := by sorry
+    (fmul rm a b).sign = DecodedFloat.dfSign (mulExact (decode a) (decode b)).fst := by
+    simp_all
+    simp [fmul]
+    simp [fmulEx]
+    simp [encode_dfSign]
+    simp [roundTo_sign_preserved]
 
 theorem fmul_sign_xor {rm : RoundMode} {a b : F32}
     (hna : ¬a.isNaN) (hnb : ¬b.isNaN)

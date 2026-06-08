@@ -887,14 +887,121 @@ private theorem bit_vec_mod_power (f: BitVec n) : f.toNat % 2^n = 0 → f.toNat 
 
 theorem fadd_posZero_r (rm : RoundMode) (a : F32) (h : ¬a.isNaN) :
     F32.feq (F32.fadd rm a F32.posZero) a := by
-  sorry
+    simp [fadd]
+    simp [faddEx]
+    simp [decode]
+    simp [h]
+    have hzero : posZero.isZero  := by decide
+    have hinf : posZero.isInf = false := by decide
+    have hnan : posZero.isNaN = false := by decide
+    simp_all
+    cases hca: classify a
+    ·{
+      have azero : a.isZero := by exact (biject_class_zero a).mpr hca
+      have ainf : a.isInf = false :=  isInf_false_of_isZero a azero
+      simp [azero,ainf]
+      simp [addExact]
+      simp [roundTo]
+      simp [encode]
+      simp [pack]
+      split
+      ·{
+        simp [feq]
+        simp_all
+        simp [isNaN]
+        simp [isZero]
+        constructor
+        ·{
+          intro hh
+          simp [mantIsZero]
+          simp [mantissa]
+        }
+        ·{
+          constructor
+          ·{
+            simp [expIsZero]
+            simp [expRaw]
+            simp [mantIsZero]
+            simp [mantissa]
+          }
+        }
+      }
+      ·{
+        simp [feq]
+        constructor
+        ·{
+          simp_all
+          decide
+        }
+        ·{
+          simp_all
+          left
+          decide
+        }
+      }
+    }
+    ·{
+      have asub : a.isSubnormal := by exact (biject_class_subnormal a).mpr hca
+      have ainf: a.isInf=false := isInf_false_of_isSubnormal a asub
+      have azerl: a.isZero = false := isZero_false_of_isSubnormal a asub
+      have anormal : a.isNormal = false := isNormal_false_of_isSubnormal a asub
+      simp_all
+      simp [addExact]
+      split
+      ·{
+        simp [roundTo]
+        simp [encode]
+        simp [pack]
+        simp [feq]
+        simp_all
+        split
+        ·{
+          constructor
+          ·{
+            simp [isNaN]
+            intro hhh
+            simp [mantIsZero]
+            simp [mantissa]
+          }
+          ·{
+            rw [← pack_sign_expRaw_mantissa a]
+            rename_i h₁ h₂
+            obtain ⟨hl₁,hm₁⟩ := h₂
+            rw [hl₁]
+            simp [significand] at h₁
+            simp [anormal] at h₁
+            grind 
+
+
+
+          }
+
+
+        }
+      }
+      have asignifi:  a.significand.toNat ≠ 0 := by
+        simp [isSubnormal] at asub
+        obtain ⟨hl,hr⟩:= asub
+        simp [mantIsZero] at hr
+        simp [mantissa] at hr
+        simp [significand]
+        simp[anormal]
+        simp [mantissa]
+        rw [ Nat.mod_mod_eq_mod_of_lt_right]
+
+
+
+
+
+
+    }
   -- TODO: complete proof. Originally cases on `classify a` (zero, subnormal,
   -- normal, inf, nan). Each subcase needs to show `fadd rm a posZero = a`
   -- at the bit level. The `nan` case contradicts `h`; the rest needs
   -- `addExact` of `a` and `posZero` (a finite zero) being a no-op modulo
   -- rounding.  Currently `sorry`.
 
-
+example {m n a: Nat} (h: m > n) : a %n %m = a % n := by apply?
   -- ── I. FMA: true single rounding ──────────────────────────────────────────────
 
 theorem fma_is_single_rounded (rm : RoundMode) (a b c : F32) :

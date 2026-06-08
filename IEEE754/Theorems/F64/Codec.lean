@@ -5,6 +5,7 @@
 -/
 
 import IEEE754.Theorems.F32.Props
+import IEEE754.Theorems.F32.Codec
 import IEEE754.Theorems.F64.Classification
 
 open BitVec
@@ -41,8 +42,7 @@ theorem decode_isZero {f : F64} (h : f.isZero) : (F64.decode f).isZero := by
 
 -- ── Pack round-trip ───────────────────────────────────────────────────────────
 
-/-- Reconstructing a 64-bit float from its (sign, expRaw, mantissa) fields gives back
-    the original value. -/
+set_option maxRecDepth 4096 in
 private theorem pack_sign_expRaw_mantissa (f : F64) :
     F64.pack f.sign f.expRaw f.mantissa = f := by
   simp only [F64.pack, F64.sign, F64.expRaw, F64.mantissa]
@@ -95,7 +95,9 @@ theorem encode_decode_normal {f : F64} (h : f.isNormal) :
       rename_i sig2 x2 ee2
       have hExpNZ : f.expRaw.toNat ≥ 1 := by
         have : f.expRaw.toNat ≠ 0 := by
-          intro heq; exact hExpZero (BitVec.eq_of_toNat_eq (by simp [heq]))
+          intro heq
+          simp [F64.expIsZero] at hExpZero
+          exact hExpZero (BitVec.eq_of_toNat_eq heq)
         omega
       have hsigLo : 2^52 ≤ sig2 := by
         rw [← heqqr]; simp [F64.significand, F64.mantissa, h]
@@ -135,12 +137,15 @@ theorem encode_decode_normal {f : F64} (h : f.isNormal) :
       have hhi : ¬(0x7FF ≤ ee + ↑sig2.log2 + 1023) := by
         rw [hlog52, ← heqqm]; omega
       simp only [hhi, ↓reduceIte]
-      have hexpEnc : (biasedExp.toNat.toUInt16.toBitVec.truncate 11) = f.expRaw := by
+      have hexpEnc : setWidth 11 (UInt16.ofNat (ee + ↑sig2.log2 + 1023).toNat).toBitVec = f.expRaw := by
         apply BitVec.eq_of_toNat_eq
         simp [UInt16.ofNat]
         rw [← heqqm]; simp [hlog52]; omega
-      have hmantEnc : (↑sig2 : BitVec 52) &&& (4503599627370495#52) = f.mantissa := by
-        rw [← heqqr]; simp [significand, h]
+      have hsig_cast : setWidth 52 (UInt64.ofNat sig2).toBitVec = (sig2 : BitVec 52) := by
+        apply BitVec.eq_of_toNat_eq
+        simp [UInt64.ofNat]
+      have hmantEnc : setWidth 52 (UInt64.ofNat sig2).toBitVec &&& 4503599627370495#52 = f.mantissa := by
+        rw [hsig_cast, ← heqqr]; simp [significand, h]
         have fman_52 : f.mantissa.toNat % 9007199254740992 = f.mantissa.toNat := by omega
         simp [fman_52]
         have allones_52 : 4503599627370495#52 = allOnes 52 := by decide

@@ -92,10 +92,22 @@ theorem flt_asymm {a b : F64} (h : F64.flt a b) : F64.flt b a = false := by
 /-- flt is transitive. -/
 theorem flt_trans {a b c : F64}
     (h1 : F64.flt a b) (h2 : F64.flt b c) : F64.flt a c := by
-    simp [F64.flt] at *
-    have ⟨h1r, h1m, h1l⟩ := h1
-    have ⟨h2r, h2m, h2l⟩ := h2
-    sorry
+    simp [flt]
+    simp [flt] at h1
+    simp [flt] at h2
+    obtain ⟨h1l, h1m, h1r⟩ := h1
+    obtain ⟨h2l, h2m, h2r⟩ := h2
+    constructor
+    ·{
+      obtain ⟨hll₁, _⟩ := h1l
+      obtain ⟨_, hll₂⟩ := h2l
+      apply And.intro hll₁ hll₂
+    }
+    ·{
+      constructor
+      ·{ grind }
+      ·{ grind }
+    }
 
 /-- NaN comparisons always return false (IEEE 754 §5.11 "unordered"). -/
 theorem flt_nan_l (a b : F64) (h : a.isNaN) : F64.flt a b = false := by
@@ -206,8 +218,9 @@ theorem fmaEx_flags_eq (rm : RoundMode) (a b c : F64) :
 
 theorem fma_ne_mul_then_add :
     ∃ (a b c : F64),
-      F64.fma .RNE a b c ≠ F64.fadd .RNE (F64.fmul .RNE a b) c := by
-  sorry  -- requires finding specific F64 bit patterns
+      F64.fma .RNE a b c ≠ F64.fadd .RNE (F64.fmul .RNE a b) c :=
+  -- a = b = 2^27+1, c = -(2^54+2^28); exact a*b+c=1, but fmul rounds to 2^54+2^28 then fadd gives 0
+  ⟨0x41A0000002000000, 0x41A0000002000000, 0xC350000004000000, by native_decide⟩
 
 -- ── J. Square root ────────────────────────────────────────────────────────────
 
